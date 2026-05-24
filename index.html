@@ -1,309 +1,331 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="light">
 <head>
     <meta charset="UTF-8">
-    <!-- Meta Viewport untuk memaksimalkan tampilan Mobile -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>LifeTrack - Pencatat Usia Barang</title>
     
     <!-- Fix Console Warning Tailwind CDN -->
     <script>
         const originalWarn = console.warn;
-        console.warn = function() {
-            if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].indexOf('cdn.tailwindcss.com') !== -1) return;
-            originalWarn.apply(console, arguments);
+        console.warn = (...args) => {
+            if (typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
+            originalWarn(...args);
         };
     </script>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Konfigurasi Tema Tailwind (Dark Mode dll) -->
+    <!-- Tailwind Config -->
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        primary: '#4f46e5', // Indigo 600
-                        primaryHover: '#4338ca', // Indigo 700
-                        surface: {
-                            light: '#f9fafb', // Gray 50
-                            dark: '#111827'   // Gray 900
-                        },
-                        card: {
-                            light: '#ffffff',
-                            dark: '#1f2937'   // Gray 800
-                        }
-                    }
+                        primary: '#4f46e5',
+                        primaryHover: '#4338ca',
+                        surface: { light: '#f3f4f6', dark: '#111827' },
+                        card: { light: '#ffffff', dark: '#1f2937' }
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
                 }
             }
         }
     </script>
     
-    <!-- Phosphor Icons (Ikon Simpel & Modern) -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     
-    <!-- Google Fonts: Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
-    
-    <!-- Custom Styles -->
     <style>
         body { 
             font-family: 'Inter', sans-serif; 
-            -webkit-tap-highlight-color: transparent; /* Hilangkan highlight biru saat di-tap di mobile */
-            background-color: #e5e7eb; /* Warna layar luar iframe/dekstop */
+            -webkit-tap-highlight-color: transparent;
+            background-color: #000; /* Outer background */
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
         }
         
-        /* Layout Pembungkus Utama untuk Mobile View */
         .mobile-container {
+            width: 100%;
             max-width: 480px;
-            margin: 0 auto;
             height: 100vh;
-            height: 100dvh; /* Dynamic viewport untuk iOS/Android terbaru */
+            height: 100dvh;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 0 40px rgba(0,0,0,0.1);
+            background-color: #f3f4f6;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
+        .dark .mobile-container { background-color: #111827; }
 
-        /* Utility Class untuk menyembunyikan scrollbar tapi tetap bisa scroll */
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Animasi Transisi Halus */
-        .page-transition { transition: opacity 0.3s ease, transform 0.3s ease; }
-        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
-        @keyframes fadeIn { 
-            from { opacity: 0; transform: translateY(15px); } 
-            to { opacity: 1; transform: translateY(0); } 
-        }
+        /* Smooth Transitions */
+        .fade-enter { animation: fadeIn 0.3s ease-out forwards; }
+        .fade-exit { animation: fadeOut 0.2s ease-in forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+        @keyframes fadeOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.98); } }
 
-        /* Spinner Loader Kecil */
+        /* Spinner for background sync */
         .spinner { 
             border: 2px solid rgba(156, 163, 175, 0.3); 
             border-radius: 50%; 
             border-top: 2px solid #4f46e5; 
-            width: 18px; 
-            height: 18px; 
+            width: 16px; height: 16px; 
             animation: spin 1s linear infinite; 
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* Kalender Scrollable */
-        .cal-day { min-width: 50px; scroll-snap-align: center; }
+        /* Calendar snap */
         .cal-container { scroll-snap-type: x mandatory; scroll-behavior: smooth; }
+        .cal-day { min-width: 60px; scroll-snap-align: center; }
+        
+        /* Nav floating effect */
+        .nav-fab-wrapper {
+            position: absolute;
+            top: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
     </style>
 </head>
 <body class="text-gray-800 dark:text-gray-200 antialiased">
 
-    <!-- Container Aplikasi Mobile -->
-    <div class="mobile-container bg-surface-light dark:bg-surface-dark transition-colors duration-300">
+    <div class="mobile-container transition-colors duration-300">
         
-        <div id="loginPage" class="absolute inset-0 z-50 bg-surface-light dark:bg-surface-dark flex flex-col items-center justify-center p-6 page-transition">
-            <div class="text-center mb-8 fade-in">
-                <div class="w-20 h-20 bg-primary text-white rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl rotate-12 transform transition hover:rotate-0">
+        <!-- ==========================================
+             LOGIN PAGE
+        =========================================== -->
+        <div id="loginPage" class="absolute inset-0 z-50 bg-surface-light dark:bg-surface-dark flex flex-col items-center justify-center p-6">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 bg-primary text-white rounded-[24px] flex items-center justify-center mx-auto mb-4 shadow-xl rotate-12">
                     <i class="ph ph-hourglass-high text-4xl"></i>
                 </div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">LifeTrack</h1>
-                <p class="text-gray-500 dark:text-gray-400 mt-2 text-sm">Pantau usia dan pergantian barang</p>
+                <h1 class="text-4xl font-black text-gray-900 dark:text-white tracking-tight">LifeTrack</h1>
+                <p class="text-gray-500 dark:text-gray-400 mt-2 text-sm font-medium">Pantau usia barang dan makananmu</p>
             </div>
             
-            <div class="w-full max-w-sm fade-in" style="animation-delay: 0.1s;">
-                <!-- Tab Toggle Login/Daftar -->
-                <div class="flex bg-gray-200 dark:bg-gray-800 rounded-xl p-1 mb-6">
-                    <button id="tabLogin" class="flex-1 py-2 text-sm font-bold rounded-lg bg-white dark:bg-gray-600 shadow text-primary dark:text-white transition-all">Masuk</button>
-                    <button id="tabRegister" class="flex-1 py-2 text-sm font-semibold rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 transition-all">Daftar</button>
-                </div>
-
-                <!-- Formulir Login -->
-                <form id="loginForm" class="w-full space-y-4">
+            <div class="w-full max-w-sm">
+                <form id="loginForm" class="w-full space-y-4 bg-white dark:bg-card-dark p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800">
+                    <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Masuk / Daftar Akun</h2>
                     <div>
-                        <input type="email" id="loginEmail" required placeholder="Email Anda" class="w-full px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition-all">
+                        <input type="text" id="authName" placeholder="Nama Panggilan" class="w-full px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition-all">
                     </div>
                     <div>
-                        <input type="password" id="loginPassword" required placeholder="Kata Sandi" class="w-full px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition-all">
+                        <input type="email" id="authEmail" required placeholder="Email Anda" class="w-full px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition-all">
                     </div>
                     <button type="submit" class="w-full bg-primary hover:bg-primaryHover text-white font-bold py-3.5 rounded-xl shadow-lg transition-transform active:scale-95 flex justify-center items-center gap-2 mt-2">
-                        <span>Masuk Sekarang</span>
-                        <i class="ph ph-sign-in font-bold"></i>
+                        <span>Akses Aplikasi</span>
+                        <i class="ph ph-arrow-right font-bold"></i>
                     </button>
+                    <p class="text-[10px] text-center text-gray-400 dark:text-gray-500 mt-2">Data tersinkronisasi aman di Database Personal.</p>
                 </form>
-
-                <!-- Formulir Daftar -->
-                <form id="registerForm" class="w-full space-y-4 hidden">
-                    <div>
-                        <input type="text" id="registerName" required placeholder="Nama Panggilan" class="w-full px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition-all">
-                    </div>
-                    <div>
-                        <input type="email" id="registerEmail" required placeholder="Email Baru" class="w-full px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition-all">
-                    </div>
-                    <div>
-                        <input type="password" id="registerPassword" required placeholder="Buat Kata Sandi" class="w-full px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary outline-none transition-all">
-                    </div>
-                    <button type="submit" class="w-full bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 font-bold py-3.5 rounded-xl shadow-lg transition-transform active:scale-95 flex justify-center items-center gap-2 mt-2">
-                        <span>Buat Akun</span>
-                        <i class="ph ph-user-plus font-bold"></i>
-                    </button>
-                </form>
-                
-                <p class="text-xs text-center text-gray-400 dark:text-gray-500 mt-8">Sinkronisasi otomatis ke Database Personal</p>
             </div>
         </div>
 
-        <div id="appContainer" class="hidden flex-col h-full w-full relative">
+        <!-- ==========================================
+             MAIN APPLICATION CONTAINER
+        =========================================== -->
+        <div id="appContainer" class="hidden flex-col h-full w-full relative z-40 bg-surface-light dark:bg-surface-dark">
             
-            <!-- Header Ringkas (Hanya Nama Akun & Tema) -->
-            <div class="pt-6 pb-2 px-6 flex justify-between items-center bg-surface-light dark:bg-surface-dark sticky top-0 z-30">
-                <div>
-                    <h2 class="text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-wide uppercase">Sesi Aktif</h2>
-                    <div class="flex items-center gap-2 mt-0.5">
-                        <h1 class="text-lg font-bold text-gray-900 dark:text-white truncate max-w-[200px]" id="userNameDisplay">User</h1>
-                        <!-- Indikator Loading Kecil -->
-                        <div id="syncIndicator" class="hidden spinner"></div>
+            <div class="pt-6 pb-3 px-6 flex justify-between items-center sticky top-0 z-30 bg-surface-light/95 dark:bg-surface-dark/95 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50">
+                <div class="flex flex-col">
+                    <span class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Akun Aktif</span>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-xl font-black text-gray-900 dark:text-white truncate max-w-[180px]" id="userNameDisplay">User</h1>
+                        <!-- Small Loading Indicator -->
+                        <div id="syncIndicator" class="hidden spinner" title="Menyinkronkan data..."></div>
                     </div>
                 </div>
-                <button id="themeToggle" class="p-2.5 rounded-full bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 transition-transform active:scale-90">
-                    <i id="themeIcon" class="ph ph-moon text-xl"></i>
+                <button id="themeToggle" class="p-2 rounded-full bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 transition-transform active:scale-90 shadow-sm">
+                    <i id="themeIcon" class="ph-fill ph-moon text-xl"></i>
                 </button>
             </div>
 
-            <!-- Area Konten Utama (Scrollable) -->
-            <div id="mainContent" class="flex-1 overflow-y-auto hide-scrollbar pb-28 pt-2">
+            <div id="mainContent" class="flex-1 overflow-y-auto hide-scrollbar pb-32 pt-2 relative">
                 
-                <!-- View: Beranda -->
-                <div id="homeView" class="fade-in">
+                <!-- VIEW 1: BERANDA -->
+                <div id="viewHome" class="view-section px-6 py-4">
                     <!-- Jam & Tanggal -->
-                    <div class="px-6 py-2">
-                        <h3 class="text-3xl font-black text-gray-900 dark:text-white tracking-tight" id="currentTime">--:--</h3>
-                        <p class="text-sm font-medium text-primary mt-1" id="currentDate">Memuat tanggal...</p>
+                    <div class="mb-6 text-center bg-white dark:bg-card-dark p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-10 -mt-10 blur-2xl"></div>
+                        <h3 class="text-5xl font-black text-gray-900 dark:text-white tracking-tighter" id="currentTime">00:00</h3>
+                        <p class="text-sm font-semibold text-primary mt-1" id="currentDate">Memuat...</p>
                     </div>
 
-                    <!-- Kalender Bulanan Horizontal -->
-                    <div class="mt-4 mb-2">
-                        <div class="px-6 flex justify-between items-center mb-2">
-                            <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200">Kalender Bulan Ini</h4>
-                        </div>
-                        <div class="cal-container flex gap-3 overflow-x-auto hide-scrollbar px-6 pb-4 pt-1" id="calendarContainer">
-                            <!-- JS Generated Days -->
-                        </div>
-                    </div>
-
-                    <!-- List Barang -->
-                    <div class="px-6 mt-4">
-                        <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center justify-between">
-                            <span>Daftar Pantauan</span>
-                            <span id="totalItemsBadge" class="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 py-0.5 px-2 rounded-full text-xs">0 Item</span>
-                        </h4>
-                        
-                        <div id="itemsList" class="space-y-4">
-                            <!-- Cards will be injected here -->
-                            <div class="text-center py-10 text-gray-400 text-sm">Belum ada barang yang dicatat.</div>
-                        </div>
+                    <!-- Ringkasan Singkat -->
+                    <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3 flex items-center justify-between">
+                        <span>Peringatan Kedaluwarsa</span>
+                    </h4>
+                    <div id="urgentItemsList" class="space-y-3 mb-6">
+                        <!-- JS akan merender item yang hampir expired disini -->
                     </div>
                 </div>
 
-                <!-- View: Profil (Awalnya Sembunyi) -->
-                <div id="profileView" class="hidden px-6 fade-in">
-                    <div class="text-center py-8">
-                        <div class="w-24 h-24 rounded-full bg-gradient-to-tr from-primary to-purple-500 mx-auto mb-4 flex items-center justify-center text-white text-3xl font-bold shadow-lg">
-                            <i class="ph ph-user"></i>
+                <!-- VIEW 2: KALENDER -->
+                <div id="viewCalendar" class="view-section hidden pt-4">
+                    <div class="px-6 mb-4">
+                        <h2 class="text-2xl font-black text-gray-900 dark:text-white">Kalender Expired</h2>
+                        <p class="text-sm text-gray-500">Bulan ini</p>
+                    </div>
+                    <!-- Horizontal Calendar -->
+                    <div class="cal-container flex gap-3 overflow-x-auto hide-scrollbar px-6 pb-6 pt-2" id="calendarContainer">
+                        <!-- JS Generated Calendar -->
+                    </div>
+                </div>
+
+                <!-- VIEW 3: DAFTAR BARANG -->
+                <div id="viewList" class="view-section hidden px-6 pt-4">
+                    <div class="flex justify-between items-end mb-4">
+                        <div>
+                            <h2 class="text-2xl font-black text-gray-900 dark:text-white">Semua Barang</h2>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Total: <span id="totalItemsBadge" class="font-bold text-primary">0</span></p>
                         </div>
-                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white" id="profileName">User Name</h2>
-                        <p class="text-gray-500 dark:text-gray-400 mt-1" id="profileEmail">email@contoh.com</p>
+                    </div>
+                    
+                    <div id="itemsList" class="space-y-4">
+                        <!-- List Barang (Full) -->
+                    </div>
+                </div>
+
+                <!-- VIEW 4: PROFIL -->
+                <div id="viewProfile" class="view-section hidden px-6 pt-4">
+                    <div class="text-center py-8">
+                        <div class="w-24 h-24 rounded-full bg-gradient-to-tr from-primary to-indigo-400 mx-auto mb-4 flex items-center justify-center text-white text-4xl shadow-lg">
+                            <i class="ph-fill ph-user"></i>
+                        </div>
+                        <h2 class="text-2xl font-black text-gray-900 dark:text-white" id="profileName">Nama</h2>
+                        <p class="text-gray-500 dark:text-gray-400 mt-1 font-medium" id="profileEmail">email@contoh.com</p>
                     </div>
 
-                    <div class="bg-white dark:bg-card-dark rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden mt-4">
-                        <button id="btnExport" class="w-full flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                            <div class="flex items-center gap-3 text-gray-700 dark:text-gray-200">
-                                <i class="ph ph-export text-xl text-green-500"></i>
-                                <span class="font-medium">Export Data (CSV)</span>
+                    <div class="bg-white dark:bg-card-dark rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
+                        <button id="btnExport" class="w-full flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <div class="flex items-center gap-3 text-gray-800 dark:text-gray-200">
+                                <div class="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
+                                    <i class="ph-fill ph-file-csv text-xl"></i>
+                                </div>
+                                <div class="text-left">
+                                    <span class="font-bold block text-sm">Export Data</span>
+                                    <span class="text-[11px] text-gray-500">Download file CSV</span>
+                                </div>
                             </div>
                             <i class="ph ph-caret-right text-gray-400"></i>
                         </button>
-                        <button id="btnLogout" class="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                            <div class="flex items-center gap-3 text-red-500">
-                                <i class="ph ph-sign-out text-xl"></i>
-                                <span class="font-medium">Keluar Akun</span>
+                        <button id="btnLogout" class="w-full flex items-center justify-between p-5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <div class="flex items-center gap-3 text-gray-800 dark:text-gray-200">
+                                <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
+                                    <i class="ph-fill ph-sign-out text-xl"></i>
+                                </div>
+                                <div class="text-left">
+                                    <span class="font-bold block text-sm text-red-600 dark:text-red-400">Keluar Akun</span>
+                                    <span class="text-[11px] text-gray-500">Hapus sesi dari perangkat</span>
+                                </div>
                             </div>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <div class="absolute bottom-0 w-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800 pb-5 pt-3 px-8 flex justify-between items-center z-40 rounded-t-[30px] shadow-[0_-10px_40px_rgba(0,0,0,0.06)]">
+            <!-- 2 di kiri, 1 di tengah, 2 di kanan -->
+            <div class="absolute bottom-0 w-full bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 pb-safe pt-2 px-4 flex justify-between items-center z-40 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] pb-6">
                 
-                <!-- Menu Kiri -->
-                <button id="navHome" class="flex flex-col items-center justify-center w-16 text-primary transition-colors">
-                    <i class="ph-fill ph-house text-2xl mb-1" id="iconHome"></i>
-                    <span class="text-[10px] font-bold">Beranda</span>
+                <!-- Left 1: Beranda -->
+                <button class="nav-btn flex flex-col items-center justify-center w-[18%] text-primary transition-colors" data-target="viewHome">
+                    <i class="ph-fill ph-house text-2xl mb-1 nav-icon"></i>
+                    <span class="text-[9px] font-bold">Home</span>
+                </button>
+                
+                <!-- Left 2: Kalender -->
+                <button class="nav-btn flex flex-col items-center justify-center w-[18%] text-gray-400 dark:text-gray-500 transition-colors" data-target="viewCalendar">
+                    <i class="ph ph-calendar-blank text-2xl mb-1 nav-icon"></i>
+                    <span class="text-[9px] font-bold">Kalender</span>
                 </button>
 
-                <!-- Tombol Floating Create (Tengah) -->
-                <div class="relative -top-8">
-                    <button id="btnOpenAddModal" class="w-14 h-14 bg-primary hover:bg-primaryHover text-white rounded-full flex items-center justify-center shadow-[0_8px_20px_rgba(79,70,229,0.4)] transform transition-transform active:scale-90 border-[4px] border-surface-light dark:border-surface-dark outline-none">
-                        <i class="ph ph-plus text-2xl font-bold"></i>
-                    </button>
+                <!-- Center: FAB ADD (+) -->
+                <div class="w-[20%] flex justify-center relative">
+                    <div class="nav-fab-wrapper">
+                        <button id="btnOpenAddModal" class="w-14 h-14 bg-primary hover:bg-primaryHover text-white rounded-full flex items-center justify-center shadow-lg shadow-primary/40 transform transition-transform active:scale-90 border-[4px] border-surface-light dark:border-surface-dark outline-none">
+                            <i class="ph ph-plus text-2xl font-bold"></i>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Menu Kanan -->
-                <button id="navProfile" class="flex flex-col items-center justify-center w-16 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                    <i class="ph ph-user text-2xl mb-1" id="iconProfile"></i>
-                    <span class="text-[10px] font-bold">Profil</span>
+                <!-- Right 1: Daftar -->
+                <button class="nav-btn flex flex-col items-center justify-center w-[18%] text-gray-400 dark:text-gray-500 transition-colors" data-target="viewList">
+                    <i class="ph ph-list-dashes text-2xl mb-1 nav-icon"></i>
+                    <span class="text-[9px] font-bold">Daftar</span>
+                </button>
+
+                <!-- Right 2: Profil -->
+                <button class="nav-btn flex flex-col items-center justify-center w-[18%] text-gray-400 dark:text-gray-500 transition-colors" data-target="viewProfile">
+                    <i class="ph ph-user text-2xl mb-1 nav-icon"></i>
+                    <span class="text-[9px] font-bold">Profil</span>
                 </button>
             </div>
         </div>
 
-        <div id="itemModal" class="fixed inset-0 z-[60] bg-gray-900/40 dark:bg-black/60 backdrop-blur-sm hidden flex-col justify-end transition-opacity">
-            <div class="bg-white dark:bg-gray-800 w-full max-w-md mx-auto rounded-t-3xl p-6 transform translate-y-full transition-transform duration-300" id="itemModalContent">
-                
+        <!-- ==========================================
+             MODAL FORM (TAMBAH / EDIT BARANG)
+        =========================================== -->
+        <div id="itemModal" class="fixed inset-0 z-[60] bg-gray-900/60 dark:bg-black/70 backdrop-blur-sm hidden flex-col justify-end transition-opacity opacity-0">
+            <div class="bg-white dark:bg-gray-900 w-full max-w-md mx-auto rounded-t-[32px] p-6 transform translate-y-full transition-transform duration-300 shadow-2xl" id="itemModalContent">
+                <div class="w-12 h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-6"></div>
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold text-gray-900 dark:text-white" id="modalTitle">Tambah Catatan Baru</h3>
-                    <button id="btnCloseModal" class="p-2 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-500 hover:text-gray-800 dark:hover:text-white">
-                        <i class="ph ph-x text-lg"></i>
+                    <h3 class="text-2xl font-black text-gray-900 dark:text-white" id="modalTitle">Tambah Catatan</h3>
+                    <button id="btnCloseModal" class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full text-gray-500 hover:text-gray-800 dark:hover:text-white transition-colors">
+                        <i class="ph ph-x text-xl font-bold"></i>
                     </button>
                 </div>
-
-                <form id="itemForm" class="space-y-4">
+                <form id="itemForm" class="space-y-4 pb-4">
                     <input type="hidden" id="itemId">
                     
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Nama Barang / Part</label>
-                        <input type="text" id="itemName" required placeholder="Misal: Ban Belakang Vario" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:border-primary">
+                        <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-widest">Nama Barang</label>
+                        <input type="text" id="itemName" required placeholder="Misal: Susu Kotak / Ban Belakang" class="w-full px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary focus:bg-white dark:focus:bg-gray-900 transition-all font-medium">
                     </div>
-
+                    
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Tgl Mulai Pakai</label>
-                            <input type="date" id="itemStart" required class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none">
+                            <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-widest">Mulai Pakai</label>
+                            <input type="date" id="itemStart" required class="w-full px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white outline-none font-medium text-sm">
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Tgl Expired <span class="text-gray-400 normal-case font-normal">(Opsional)</span></label>
-                            <input type="date" id="itemExpiry" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none">
+                            <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-widest">Expired <span class="text-gray-400 normal-case font-normal">(Opsional)</span></label>
+                            <input type="date" id="itemExpiry" class="w-full px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white outline-none font-medium text-sm">
                         </div>
                     </div>
-
+                    
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Kategori</label>
-                        <select id="itemCategory" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none appearance-none">
-                            <option value="Otomotif">Otomotif (Motor/Mobil)</option>
-                            <option value="Makanan">Makanan / Minuman</option>
-                            <option value="Elektronik">Elektronik</option>
-                            <option value="Dokumen">Dokumen (KTP/SIM/STNK)</option>
-                            <option value="Lainnya">Lainnya</option>
-                        </select>
+                        <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-widest">Kategori</label>
+                        <div class="relative">
+                            <select id="itemCategory" class="w-full px-4 py-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white outline-none appearance-none font-medium">
+                                <option value="Makanan">🍔 Makanan / Minuman</option>
+                                <option value="Otomotif">🏍️ Otomotif (Motor/Mobil)</option>
+                                <option value="Elektronik">💻 Elektronik</option>
+                                <option value="Kesehatan">💊 Obat & Kesehatan</option>
+                                <option value="Dokumen">📄 Dokumen (KTP/STNK)</option>
+                                <option value="Lainnya">📦 Lainnya</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                                <i class="ph-fill ph-caret-down"></i>
+                            </div>
+                        </div>
                     </div>
-
+                    
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">Catatan</label>
-                        <textarea id="itemNotes" rows="2" placeholder="Catatan tambahan..." class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white outline-none resize-none"></textarea>
+                        <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-widest">Catatan Tambahan</label>
+                        <textarea id="itemNotes" rows="2" placeholder="Tulis detail disini..." class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white outline-none resize-none font-medium"></textarea>
                     </div>
-
-                    <div class="pt-2 flex gap-3">
-                        <!-- Tombol Hapus hanya muncul saat Edit -->
-                        <button type="button" id="btnDeleteItem" class="hidden flex-1 bg-red-100 hover:bg-red-200 text-red-600 dark:bg-red-900/30 dark:text-red-400 font-bold py-3.5 rounded-xl transition-colors">
+                    
+                    <div class="pt-4 flex gap-3">
+                        <button type="button" id="btnDeleteItem" class="hidden flex-1 bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400 font-bold py-3.5 rounded-xl transition-colors border border-red-200 dark:border-red-900/30">
                             Hapus
                         </button>
-                        <button type="submit" class="flex-[2] bg-primary hover:bg-primaryHover text-white font-bold py-3.5 rounded-xl shadow-lg transition-transform active:scale-95">
+                        <button type="submit" class="flex-[2] bg-primary hover:bg-primaryHover text-white font-bold py-3.5 rounded-xl shadow-lg shadow-primary/30 transition-transform active:scale-95">
                             Simpan Data
                         </button>
                     </div>
@@ -311,28 +333,28 @@
             </div>
         </div>
 
-        <!-- Custom Toast Notification -->
-        <div id="toast" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-2xl z-[70] transition-all duration-300 opacity-0 translate-y-[-20px] pointer-events-none flex items-center gap-2">
-            <i class="ph-fill ph-check-circle text-green-400 text-lg"></i>
-            <span id="toastMessage" class="text-sm font-medium">Berhasil</span>
+        <!-- Toast Notifikasi -->
+        <div id="toast" class="fixed top-6 left-1/2 transform -translate-x-1/2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-6 py-3 rounded-full shadow-2xl z-[70] transition-all duration-300 opacity-0 translate-y-[-20px] pointer-events-none flex items-center gap-3">
+            <i class="ph-fill ph-check-circle text-green-400 dark:text-green-600 text-xl"></i>
+            <span id="toastMessage" class="text-sm font-bold tracking-wide">Berhasil</span>
         </div>
 
     </div>
 
     <script>
         // ==========================================
-        // KONFIGURASI URL BACKEND APPS SCRIPT
+        // URL BACKEND APPS SCRIPT (UBAH JIKA PERLU)
         // ==========================================
-        const APPSCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw8-Kg8qIBKl3ePKeSiP92RrT1JjBU9HfH2jFDevQjYNF0iuum4_BQq4ws5ZmQq3HDGYA/exec'; 
+        const APPSCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw8-Kg8qIBKl3ePKeSiP92RrT1JjBU9HfH2jFDevQjYNF0iuum4_BQq4ws5ZmQq3HDGYA/exec';
 
         // ==========================================
-        // SISTEM PENYIMPANAN AMAN (ANTI WHITE SCREEN)
+        // SISTEM PENYIMPANAN AMAN (MENCEGAH BLANK SCREEN)
         // ==========================================
-        // Mencegah error fatal jika browser memblokir localStorage (Tracking Prevention)
+        // Jika browser memblokir localStorage (Tracking Prevention), aplikasi tetap hidup menggunakan memory.
         const memoryStorage = {};
         const safeStorage = {
             get: (key) => {
-                try { return localStorage.getItem(key); }
+                try { return localStorage.getItem(key) || memoryStorage[key] || null; }
                 catch (e) { return memoryStorage[key] || null; }
             },
             set: (key, val) => {
@@ -345,412 +367,418 @@
             }
         };
 
-        // ==========================================
-        // STATE APLIKASI
-        // ==========================================
-        let currentUserEmail = safeStorage.get('lifeTrackUserEmail') || null;
-        let currentUserName = safeStorage.get('lifeTrackUserName') || null;
-        let itemsData = [];
-        let currentTheme = safeStorage.get('theme') || 'light';
+        // State Aplikasi
+        let state = {
+            email: safeStorage.get('userEmail') || null,
+            name: safeStorage.get('userName') || null,
+            items: [],
+            theme: safeStorage.get('theme') || 'light'
+        };
 
-        // ==========================================
-        // INISIALISASI SAAT DOM SIAP
-        // ==========================================
         document.addEventListener('DOMContentLoaded', () => {
             initTheme();
-            setupAuthTabs();
+            setupAuth();
             setupNavigation();
             setupModal();
             updateDateTime();
-            
-            // Jam update setiap menit
-            setInterval(updateDateTime, 60000);
+            setInterval(updateDateTime, 60000); // Update jam tiap menit
 
-            // Cek Status Login
-            if (currentUserEmail) {
-                showApp();
+            // Routing awal (Cek Login)
+            if (state.email) {
+                showAppUI();
                 loadDataFromServer();
             } else {
-                // Tampilkan halaman login jika belum login
-                document.getElementById('loginPage').classList.remove('hidden');
+                showLoginUI();
             }
         });
 
         // ==========================================
-        // FUNGSI TEMA (GELAP/TERANG)
+        // TEMA DAN WAKTU
         // ==========================================
         function initTheme() {
-            const htmlClass = document.documentElement.classList;
+            const html = document.documentElement;
             const icon = document.getElementById('themeIcon');
-            
-            if (currentTheme === 'dark' || (!safeStorage.get('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                htmlClass.add('dark');
-                icon.className = 'ph ph-sun text-xl text-yellow-500';
+            if (state.theme === 'dark' || (!safeStorage.get('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                html.classList.add('dark');
+                icon.className = 'ph-fill ph-sun text-xl text-yellow-500';
             } else {
-                htmlClass.remove('dark');
-                icon.className = 'ph ph-moon text-xl text-gray-600';
+                html.classList.remove('dark');
+                icon.className = 'ph-fill ph-moon text-xl text-gray-700';
             }
         }
 
         document.getElementById('themeToggle').addEventListener('click', () => {
-            const htmlClass = document.documentElement.classList;
+            const html = document.documentElement;
             const icon = document.getElementById('themeIcon');
-            
-            if (htmlClass.contains('dark')) {
-                htmlClass.remove('dark');
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                state.theme = 'light';
                 safeStorage.set('theme', 'light');
-                icon.className = 'ph ph-moon text-xl text-gray-600';
+                icon.className = 'ph-fill ph-moon text-xl text-gray-700';
             } else {
-                htmlClass.add('dark');
+                html.classList.add('dark');
+                state.theme = 'dark';
                 safeStorage.set('theme', 'dark');
-                icon.className = 'ph ph-sun text-xl text-yellow-500';
+                icon.className = 'ph-fill ph-sun text-xl text-yellow-500';
             }
         });
 
-        // ==========================================
-        // FUNGSI JAM & TANGGAL
-        // ==========================================
         function updateDateTime() {
             const now = new Date();
-            const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':');
             const dateStr = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            
             document.getElementById('currentTime').innerText = timeStr;
             document.getElementById('currentDate').innerText = dateStr;
         }
 
         // ==========================================
-        // FUNGSI AUTENTIKASI (LOGIN & DAFTAR)
+        // AUTENTIKASI & TRANSISI HALAMAN
         // ==========================================
-        function setupAuthTabs() {
-            const tabLogin = document.getElementById('tabLogin');
-            const tabRegister = document.getElementById('tabRegister');
-            const formLogin = document.getElementById('loginForm');
-            const formRegister = document.getElementById('registerForm');
-
-            tabLogin.addEventListener('click', () => {
-                formLogin.classList.remove('hidden');
-                formRegister.classList.add('hidden');
-                
-                tabLogin.className = 'flex-1 py-2 text-sm font-bold rounded-lg bg-white dark:bg-gray-600 shadow text-primary dark:text-white transition-all';
-                tabRegister.className = 'flex-1 py-2 text-sm font-semibold rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 transition-all';
-            });
-
-            tabRegister.addEventListener('click', () => {
-                formRegister.classList.remove('hidden');
-                formLogin.classList.add('hidden');
-                
-                tabRegister.className = 'flex-1 py-2 text-sm font-bold rounded-lg bg-white dark:bg-gray-600 shadow text-primary dark:text-white transition-all';
-                tabLogin.className = 'flex-1 py-2 text-sm font-semibold rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 transition-all';
-            });
-
-            // Handle Submit
-            formLogin.addEventListener('submit', (e) => {
+        function setupAuth() {
+            const loginForm = document.getElementById('loginForm');
+            
+            loginForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                const email = document.getElementById('loginEmail').value.trim().toLowerCase();
-                if(email) handleAuthSuccess(email, email.split('@')[0]);
-            });
-
-            formRegister.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const name = document.getElementById('registerName').value.trim();
-                const email = document.getElementById('registerEmail').value.trim().toLowerCase();
-                if(email && name) {
-                    showToast('Akun disiapkan!');
-                    setTimeout(() => handleAuthSuccess(email, name), 800);
+                const nameInput = document.getElementById('authName').value.trim();
+                const emailInput = document.getElementById('authEmail').value.trim().toLowerCase();
+                
+                if(emailInput) {
+                    state.email = emailInput;
+                    state.name = nameInput || emailInput.split('@')[0];
+                    
+                    safeStorage.set('userEmail', state.email);
+                    safeStorage.set('userName', state.name);
+                    
+                    showAppUI();
+                    loadDataFromServer();
                 }
             });
+
+            document.getElementById('btnLogout').addEventListener('click', () => {
+                safeStorage.remove('userEmail');
+                safeStorage.remove('userName');
+                state.email = null;
+                state.name = null;
+                state.items = [];
+                showLoginUI();
+                showToast('Berhasil keluar');
+            });
         }
 
-        function handleAuthSuccess(email, name) {
-            currentUserEmail = email;
-            currentUserName = name;
-            safeStorage.set('lifeTrackUserEmail', email);
-            safeStorage.set('lifeTrackUserName', name);
+        function showAppUI() {
+            // Update Profile texts
+            document.getElementById('userNameDisplay').innerText = state.name;
+            document.getElementById('profileName').innerText = state.name;
+            document.getElementById('profileEmail').innerText = state.email;
+
+            // Transition
+            const login = document.getElementById('loginPage');
+            const app = document.getElementById('appContainer');
             
-            document.getElementById('loginEmail').value = '';
-            document.getElementById('loginPassword').value = '';
+            login.classList.add('hidden');
+            app.classList.remove('hidden');
+            app.classList.add('flex', 'fade-enter');
+            setTimeout(() => app.classList.remove('fade-enter'), 300);
             
-            showApp();
-            loadDataFromServer();
+            // Go to home by default
+            switchView('viewHome');
         }
 
-        document.getElementById('btnLogout').addEventListener('click', () => {
-            safeStorage.remove('lifeTrackUserEmail');
-            safeStorage.remove('lifeTrackUserName');
-            currentUserEmail = null;
-            currentUserName = null;
-            itemsData = [];
+        function showLoginUI() {
+            const login = document.getElementById('loginPage');
+            const app = document.getElementById('appContainer');
             
-            document.getElementById('appContainer').classList.add('hidden');
-            document.getElementById('appContainer').classList.remove('flex');
-            document.getElementById('loginPage').classList.remove('hidden');
-            showToast('Berhasil keluar');
-        });
+            app.classList.add('hidden');
+            app.classList.remove('flex');
+            login.classList.remove('hidden');
+            login.classList.add('fade-enter');
+            setTimeout(() => login.classList.remove('fade-enter'), 300);
+        }
 
         // ==========================================
-        // NAVIGASI UTAMA (TAMPILAN UI)
+        // NAVIGASI BAWAH (5 MENU)
         // ==========================================
-        function showApp() {
-            document.getElementById('loginPage').classList.add('hidden');
-            document.getElementById('appContainer').classList.remove('hidden');
-            document.getElementById('appContainer').classList.add('flex');
-            
-            document.getElementById('userNameDisplay').innerText = currentUserName || currentUserEmail.split('@')[0];
-            document.getElementById('profileName').innerText = currentUserName || currentUserEmail.split('@')[0];
-            document.getElementById('profileEmail').innerText = currentUserEmail;
-        }
-
         function setupNavigation() {
-            const btnHome = document.getElementById('navHome');
-            const btnProfile = document.getElementById('navProfile');
-            const viewHome = document.getElementById('homeView');
-            const viewProfile = document.getElementById('profileView');
-            const iconHome = document.getElementById('iconHome');
-            const iconProfile = document.getElementById('iconProfile');
-
-            btnHome.addEventListener('click', () => {
-                viewHome.classList.remove('hidden');
-                viewProfile.classList.add('hidden');
-                
-                btnHome.className = 'flex flex-col items-center justify-center w-16 text-primary transition-colors';
-                iconHome.className = 'ph-fill ph-house text-2xl mb-1';
-                
-                btnProfile.className = 'flex flex-col items-center justify-center w-16 text-gray-400 dark:text-gray-500 transition-colors';
-                iconProfile.className = 'ph ph-user text-2xl mb-1';
-            });
-
-            btnProfile.addEventListener('click', () => {
-                viewProfile.classList.remove('hidden');
-                viewHome.classList.add('hidden');
-                
-                btnProfile.className = 'flex flex-col items-center justify-center w-16 text-primary transition-colors';
-                iconProfile.className = 'ph-fill ph-user text-2xl mb-1';
-                
-                btnHome.className = 'flex flex-col items-center justify-center w-16 text-gray-400 dark:text-gray-500 transition-colors';
-                iconHome.className = 'ph ph-house text-2xl mb-1';
+            const navBtns = document.querySelectorAll('.nav-btn');
+            
+            navBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const targetId = btn.getAttribute('data-target');
+                    switchView(targetId);
+                    
+                    // Update active styling
+                    navBtns.forEach(b => {
+                        b.classList.remove('text-primary');
+                        b.classList.add('text-gray-400', 'dark:text-gray-500');
+                        const icon = b.querySelector('.nav-icon');
+                        icon.className = icon.className.replace('ph-fill ', 'ph ');
+                    });
+                    
+                    btn.classList.remove('text-gray-400', 'dark:text-gray-500');
+                    btn.classList.add('text-primary');
+                    const activeIcon = btn.querySelector('.nav-icon');
+                    activeIcon.className = activeIcon.className.replace('ph ', 'ph-fill ');
+                });
             });
         }
 
+        function switchView(viewId) {
+            const views = document.querySelectorAll('.view-section');
+            views.forEach(v => {
+                if (v.id === viewId) {
+                    v.classList.remove('hidden');
+                    v.classList.add('fade-enter');
+                    setTimeout(() => v.classList.remove('fade-enter'), 300);
+                } else {
+                    v.classList.add('hidden');
+                }
+            });
+            
+            if (viewId === 'viewCalendar') renderCalendar();
+        }
+
         // ==========================================
-        // KALENDER BULANAN (SCROLLABLE)
+        // LOGIKA RENDER (CARD & USIA & KALENDER)
         // ==========================================
+        function getCategoryEmoji(cat) {
+            if(cat.includes('Makanan')) return '🍔';
+            if(cat.includes('Otomotif')) return '🏍️';
+            if(cat.includes('Elektronik')) return '💻';
+            if(cat.includes('Kesehatan')) return '💊';
+            if(cat.includes('Dokumen')) return '📄';
+            return '📦';
+        }
+
+        // FUNGSI UTAMA: MENGHITUNG DAN MERENDER CARD ITEM
+        function generateItemCard(item) {
+            const start = new Date(item.startDate);
+            const now = new Date();
+            const diffTime = now - start;
+            const diffDays = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+            
+            // Format Usia (Lebih Besar & Jelas)
+            let ageText = "";
+            let ageSub = "";
+            if (diffDays === 0) { ageText = "Baru"; ageSub = "Hari ini"; }
+            else if (diffDays < 30) { ageText = diffDays; ageSub = "Hari"; }
+            else if (diffDays < 365) { 
+                ageText = Math.floor(diffDays / 30); ageSub = `Bulan ${diffDays % 30 > 0 ? (diffDays % 30)+' Hr' : ''}`; 
+            } else {
+                ageText = Math.floor(diffDays / 365); ageSub = `Tahun ${Math.floor((diffDays % 365)/30)} Bln`; 
+            }
+
+            const startStr = start.toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'2-digit'});
+            
+            // Progress Bar & Expiry Status
+            let progressHtml = '';
+            let isUrgent = false;
+
+            if (item.expiryDate) {
+                const end = new Date(item.expiryDate);
+                end.setHours(23,59,59);
+                const daysLeft = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                
+                let statusText = daysLeft > 0 ? `Sisa ${daysLeft} Hari` : `Lewat ${Math.abs(daysLeft)} Hari`;
+                if(daysLeft === 0) statusText = "Expired Hari Ini!";
+
+                // Calculate percentage based on start date and end date
+                const totalDuration = end.getTime() - start.getTime();
+                let percentage = 0;
+                if (totalDuration > 0) {
+                    percentage = Math.max(0, ((now.getTime() - start.getTime()) / totalDuration) * 100);
+                }
+                if (now.getTime() >= end.getTime() || daysLeft <= 0) percentage = 100;
+                
+                // Color Logic
+                let barColor = 'bg-green-500';
+                let textColor = 'text-green-600 dark:text-green-400';
+                let bgBadge = 'bg-green-100 dark:bg-green-900/30';
+
+                if (percentage >= 100 || daysLeft < 0) { 
+                    barColor = 'bg-red-500'; textColor = 'text-red-600 dark:text-red-400'; bgBadge = 'bg-red-100 dark:bg-red-900/30';
+                    isUrgent = true;
+                }
+                else if (percentage >= 80 || daysLeft <= 7) { 
+                    barColor = 'bg-orange-500'; textColor = 'text-orange-600 dark:text-orange-400'; bgBadge = 'bg-orange-100 dark:bg-orange-900/30';
+                    isUrgent = true;
+                }
+
+                progressHtml = `
+                    <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tenggat Waktu</span>
+                            <span class="text-[11px] font-bold px-2 py-0.5 rounded-md ${bgBadge} ${textColor}">${statusText}</span>
+                        </div>
+                        <div class="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden">
+                            <div class="${barColor} h-2 rounded-full transition-all duration-1000 ease-out" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>`;
+            }
+
+            const cardHTML = `
+                <div class="bg-white dark:bg-card-dark rounded-3xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 relative overflow-hidden active:scale-[0.98] transition-transform cursor-pointer" onclick="openModalForEdit('${item.id}')">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-2xl bg-surface-light dark:bg-gray-800 flex items-center justify-center text-2xl shadow-inner">
+                                ${getCategoryEmoji(item.category)}
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-900 dark:text-white leading-tight">${item.name}</h3>
+                                <p class="text-[11px] font-medium text-gray-400 mt-0.5">${item.category.split(' ')[0]} ${item.notes ? ' • '+item.notes : ''}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-end justify-between bg-surface-light dark:bg-gray-800/50 p-4 rounded-2xl">
+                        <div>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Usia Pemakaian</p>
+                            <div class="flex items-baseline gap-1.5">
+                                <!-- TEKS USIA DIPERBESAR (FITUR UTAMA) -->
+                                <p class="text-4xl sm:text-5xl font-black text-gray-900 dark:text-white leading-none tracking-tighter">${ageText}</p>
+                                <p class="text-sm font-bold text-gray-500">${ageSub}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Sejak</p>
+                            <p class="text-sm font-bold text-gray-700 dark:text-gray-300">${startStr}</p>
+                        </div>
+                    </div>
+                    ${progressHtml}
+                </div>
+            `;
+            return { html: cardHTML, isUrgent: isUrgent };
+        }
+
+        function renderLists() {
+            const listFull = document.getElementById('itemsList');
+            const listUrgent = document.getElementById('urgentItemsList');
+            document.getElementById('totalItemsBadge').innerText = state.items.length;
+            
+            listFull.innerHTML = '';
+            listUrgent.innerHTML = '';
+            
+            if (!state.items || state.items.length === 0) {
+                const emptyHTML = `
+                    <div class="text-center py-12 px-6 bg-transparent border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-3xl">
+                        <div class="w-16 h-16 mx-auto bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
+                            <i class="ph ph-archive text-2xl text-gray-400"></i>
+                        </div>
+                        <h3 class="text-gray-900 dark:text-white font-bold mb-1">Belum Ada Data</h3>
+                        <p class="text-gray-500 text-xs">Tekan tombol + di bawah untuk mencatat.</p>
+                    </div>`;
+                listFull.innerHTML = emptyHTML;
+                listUrgent.innerHTML = `<p class="text-xs text-gray-500 text-center italic">Aman terkendali.</p>`;
+                return;
+            }
+
+            // Sort data: Expired items (with dates) first, then by newest created
+            let sortedItems = [...state.items].sort((a, b) => {
+                if(a.expiryDate && !b.expiryDate) return -1;
+                if(!a.expiryDate && b.expiryDate) return 1;
+                if(a.expiryDate && b.expiryDate) return new Date(a.expiryDate) - new Date(b.expiryDate);
+                return new Date(b.startDate) - new Date(a.startDate);
+            });
+
+            let urgentCount = 0;
+            sortedItems.forEach(item => {
+                const cardInfo = generateItemCard(item);
+                listFull.insertAdjacentHTML('beforeend', cardInfo.html);
+                
+                if (cardInfo.isUrgent) {
+                    listUrgent.insertAdjacentHTML('beforeend', cardInfo.html);
+                    urgentCount++;
+                }
+            });
+
+            if(urgentCount === 0) {
+                listUrgent.innerHTML = `
+                <div class="bg-green-50 dark:bg-green-900/20 rounded-2xl p-4 border border-green-100 dark:border-green-900/50 flex items-center gap-3">
+                    <i class="ph-fill ph-check-circle text-green-500 text-2xl"></i>
+                    <div>
+                        <p class="text-sm font-bold text-green-800 dark:text-green-400">Semua Kondisi Baik</p>
+                        <p class="text-[11px] text-green-600 dark:text-green-500">Belum ada barang yang perlu diganti.</p>
+                    </div>
+                </div>`;
+            }
+        }
+
         function renderCalendar() {
             const container = document.getElementById('calendarContainer');
             container.innerHTML = '';
             
             const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth(); // 0-11
+            const year = now.getFullYear(); 
+            const month = now.getMonth(); 
             const todayDate = now.getDate();
-            
-            // Dapatkan jumlah hari dalam bulan ini
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             
-            // Dapatkan semua tanggal expired bulan ini dari data barang
-            const expireDaysThisMonth = [];
-            itemsData.forEach(item => {
-                if(item.expiryDate) {
-                    const exp = new Date(item.expiryDate);
-                    if(exp.getFullYear() === year && exp.getMonth() === month) {
-                        expireDaysThisMonth.push(exp.getDate());
-                    }
-                }
-            });
+            // Collect expiration dates for this month
+            const expDays = state.items.filter(i => i.expiryDate).map(i => {
+                const d = new Date(i.expiryDate);
+                if (d.getFullYear() === year && d.getMonth() === month) return d.getDate();
+                return null;
+            }).filter(Boolean);
 
-            const hariNama = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+            const daysNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
             for (let i = 1; i <= daysInMonth; i++) {
                 const dateObj = new Date(year, month, i);
-                const dayName = hariNama[dateObj.getDay()];
                 const isToday = (i === todayDate);
-                const hasExpired = expireDaysThisMonth.includes(i);
+                const hasAlert = expDays.includes(i);
 
-                // Styling untuk card hari
                 let bgClass = isToday 
-                    ? 'bg-primary text-white shadow-lg transform scale-110' 
+                    ? 'bg-primary text-white shadow-lg shadow-primary/30 transform scale-110 z-10' 
                     : 'bg-white dark:bg-card-dark text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-800';
                 
-                let dotHtml = hasExpired 
-                    ? `<div class="w-1.5 h-1.5 rounded-full mt-1 ${isToday ? 'bg-white' : 'bg-red-500'}"></div>` 
-                    : `<div class="w-1.5 h-1.5 mt-1"></div>`; // spacer
+                let indicatorHTML = '';
+                if(hasAlert) {
+                    indicatorHTML = `<div class="w-1.5 h-1.5 rounded-full mt-1.5 ${isToday ? 'bg-white' : 'bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.8)]'}"></div>`;
+                } else {
+                    indicatorHTML = `<div class="w-1.5 h-1.5 mt-1.5"></div>`; // spacer
+                }
 
-                const html = `
-                    <div class="cal-day flex flex-col items-center justify-center rounded-2xl p-2.5 cursor-pointer transition-all ${bgClass}">
-                        <span class="text-[10px] font-semibold uppercase opacity-80 mb-1">${dayName}</span>
-                        <span class="text-lg font-black leading-none">${i}</span>
-                        ${dotHtml}
+                container.insertAdjacentHTML('beforeend', `
+                    <div class="cal-day flex flex-col items-center justify-center rounded-[20px] p-3 transition-all ${bgClass}">
+                        <span class="text-[10px] font-bold uppercase opacity-80 mb-1 tracking-widest">${daysNames[dateObj.getDay()]}</span>
+                        <span class="text-xl font-black leading-none">${i}</span>
+                        ${indicatorHTML}
                     </div>
-                `;
-                container.insertAdjacentHTML('beforeend', html);
+                `);
             }
-
-            // Scroll otomatis ke hari ini
+            
+            // Auto scroll ke hari ini
             setTimeout(() => {
                 const todayEl = container.querySelector('.bg-primary');
-                if(todayEl) {
-                    const scrollPos = todayEl.offsetLeft - (container.offsetWidth / 2) + (todayEl.offsetWidth / 2);
-                    container.scrollTo({ left: scrollPos, behavior: 'smooth' });
-                }
+                if(todayEl) container.scrollTo({ left: todayEl.offsetLeft - (container.offsetWidth / 2) + (todayEl.offsetWidth / 2), behavior: 'smooth' });
             }, 300);
         }
 
         // ==========================================
-        // PENGELOLAAN DATA BARANG & RENDER LIST
+        // MODAL TAMBAH / EDIT
         // ==========================================
-        function getCategoryIcon(cat) {
-            switch(cat) {
-                case 'Otomotif': return '<i class="ph ph-car text-2xl"></i>';
-                case 'Makanan': return '<i class="ph ph-hamburger text-2xl"></i>';
-                case 'Elektronik': return '<i class="ph ph-desktop text-2xl"></i>';
-                case 'Dokumen': return '<i class="ph ph-identification-card text-2xl"></i>';
-                default: return '<i class="ph ph-package text-2xl"></i>';
-            }
-        }
-
-        function calculateAge(startDateStr) {
-            const start = new Date(startDateStr);
-            const now = new Date();
-            const diffTime = Math.abs(now - start);
-            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-            
-            if (diffDays === 0) return "Hari Ini";
-            if (diffDays < 30) return `${diffDays} Hari`;
-            
-            const months = Math.floor(diffDays / 30);
-            const days = diffDays % 30;
-            return `${months} Bln ${days > 0 ? days + ' Hr' : ''}`;
-        }
-
-        function renderItemsList() {
-            const listEl = document.getElementById('itemsList');
-            document.getElementById('totalItemsBadge').innerText = `${itemsData.length} Item`;
-            
-            if (itemsData.length === 0) {
-                listEl.innerHTML = `
-                    <div class="text-center py-12 px-6 bg-white dark:bg-card-dark rounded-3xl border border-dashed border-gray-300 dark:border-gray-700">
-                        <i class="ph ph-empty text-5xl text-gray-300 dark:text-gray-600 mb-3 block"></i>
-                        <h3 class="text-gray-500 dark:text-gray-400 font-medium text-sm">Belum ada catatan barang</h3>
-                        <p class="text-xs text-gray-400 mt-1">Tap tombol + di bawah untuk menambah data.</p>
-                    </div>`;
-                return;
-            }
-
-            // Sort data: Yang mendekati expired ditaruh atas (Opsional, saat ini berdasarkan terbaru)
-            listEl.innerHTML = '';
-            
-            itemsData.forEach(item => {
-                // Formatting Tanggal String
-                const startStrFormat = new Date(item.startDate).toLocaleDateString('id-ID', {day:'numeric', month:'short'});
-                const ageText = calculateAge(item.startDate);
-                
-                let progressHtml = '';
-                
-                if (item.expiryDate) {
-                    const end = new Date(item.expiryDate).getTime();
-                    const start = new Date(item.startDate).getTime();
-                    const now = new Date().getTime();
-                    
-                    const expStrFormat = new Date(item.expiryDate).toLocaleDateString('id-ID', {day:'numeric', month:'short'});
-                    
-                    // Hitung sisa hari
-                    const daysLeft = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
-                    let statusText = daysLeft > 0 ? `Sisa ${daysLeft} Hr` : `Lewat ${Math.abs(daysLeft)} Hr`;
-                    if(daysLeft === 0) statusText = "Hari ini Expired!";
-
-                    // Hitung Persentase Progress
-                    let percentage = 0;
-                    if (now >= end) {
-                        percentage = 100;
-                    } else if (now > start) {
-                        percentage = ((now - start) / (end - start)) * 100;
-                    }
-
-                    // Tentukan Warna berdasarkan persentase
-                    let colorClass = 'bg-green-500';
-                    let textColor = 'text-green-500';
-                    if (percentage >= 100) { colorClass = 'bg-red-600'; textColor = 'text-red-600'; }
-                    else if (percentage > 80) { colorClass = 'bg-red-500'; textColor = 'text-red-500'; }
-                    else if (percentage > 60) { colorClass = 'bg-orange-500'; textColor = 'text-orange-500'; }
-
-                    progressHtml = `
-                        <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700/50">
-                            <div class="flex justify-between text-[10px] mb-1.5 font-bold uppercase tracking-wide">
-                                <span class="text-gray-400">Exp: ${expStrFormat}</span>
-                                <span class="${textColor}">${statusText}</span>
-                            </div>
-                            <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
-                                <div class="${colorClass} h-1.5 rounded-full transition-all duration-1000" style="width: ${percentage}%"></div>
-                            </div>
-                        </div>
-                    `;
-                }
-
-                const cardHtml = `
-                    <div class="bg-white dark:bg-card-dark rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 relative overflow-hidden active:scale-[0.98] transition-transform cursor-pointer" onclick="openModalForEdit('${item.id}')">
-                        <div class="flex justify-between items-start mb-1">
-                            <div class="flex items-center gap-3">
-                                <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 text-primary flex items-center justify-center">
-                                    ${getCategoryIcon(item.category)}
-                                </div>
-                                <div>
-                                    <h3 class="font-bold text-base text-gray-900 dark:text-white leading-tight">${item.name}</h3>
-                                    <p class="text-[11px] font-medium text-gray-400 mt-0.5 line-clamp-1">${item.category} ${item.notes ? '• '+item.notes : ''}</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-3">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Usia Pemakaian</p>
-                            <div class="flex items-end gap-2">
-                                <p class="text-3xl font-black text-gray-900 dark:text-white leading-none tracking-tight">${ageText}</p>
-                                <p class="text-xs font-medium text-gray-400 mb-0.5">sejak ${startStrFormat}</p>
-                            </div>
-                        </div>
-                        
-                        ${progressHtml}
-                    </div>
-                `;
-                listEl.insertAdjacentHTML('beforeend', cardHtml);
-            });
-        }
-
-        // ==========================================
-        // FUNGSI MODAL (TAMBAH & EDIT)
-        // ==========================================
-        const modal = document.getElementById('itemModal');
-        const modalContent = document.getElementById('itemModalContent');
-        const itemForm = document.getElementById('itemForm');
-
         function setupModal() {
-            // Buka Modal Tambah
+            const modal = document.getElementById('itemModal');
+            const content = document.getElementById('itemModalContent');
+
             document.getElementById('btnOpenAddModal').addEventListener('click', () => {
-                document.getElementById('modalTitle').innerText = 'Tambah Data';
+                document.getElementById('modalTitle').innerText = 'Tambah Catatan Baru';
                 document.getElementById('itemId').value = '';
                 document.getElementById('btnDeleteItem').classList.add('hidden');
-                itemForm.reset();
+                document.getElementById('itemForm').reset();
+                document.getElementById('itemStart').value = new Date().toISOString().split('T')[0];
                 
-                // Set default tanggal hari ini
-                const todayStr = new Date().toISOString().split('T')[0];
-                document.getElementById('itemStart').value = todayStr;
-                
-                openModal();
+                modal.classList.remove('hidden'); modal.classList.add('flex');
+                setTimeout(() => { modal.classList.add('opacity-100'); content.classList.remove('translate-y-full'); }, 10);
             });
 
-            // Tutup Modal
             document.getElementById('btnCloseModal').addEventListener('click', closeModal);
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) closeModal();
-            });
+            modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
-            // Submit Form (Optimistic UI Update)
-            itemForm.addEventListener('submit', (e) => {
+            document.getElementById('itemForm').addEventListener('submit', (e) => {
                 e.preventDefault();
-                closeModal();
-                
                 const id = document.getElementById('itemId').value;
                 const newItem = {
-                    id: id || Date.now().toString(), // Generate temp ID if new
+                    id: id || 'temp_' + Date.now().toString(),
                     name: document.getElementById('itemName').value,
                     startDate: document.getElementById('itemStart').value,
                     expiryDate: document.getElementById('itemExpiry').value,
@@ -758,174 +786,166 @@
                     notes: document.getElementById('itemNotes').value
                 };
 
+                // Optimistic UI Update
                 if (id) {
-                    // Update
-                    const index = itemsData.findIndex(i => i.id === id);
-                    if (index !== -1) itemsData[index] = newItem;
-                    saveDataToServer('updateItem', newItem);
+                    const index = state.items.findIndex(i => i.id === id);
+                    if (index !== -1) state.items[index] = newItem;
+                    syncToServer('updateItem', newItem);
                     showToast('Data diperbarui');
                 } else {
-                    // Create
-                    itemsData.unshift(newItem); // Tambah di atas
-                    saveDataToServer('addItem', newItem);
+                    state.items.unshift(newItem); // Tambah di paling atas
+                    syncToServer('addItem', newItem);
                     showToast('Data ditambahkan');
                 }
                 
-                renderItemsList();
+                closeModal();
+                renderLists();
                 renderCalendar();
             });
 
-            // Delete Item
             document.getElementById('btnDeleteItem').addEventListener('click', () => {
                 const id = document.getElementById('itemId').value;
                 if(id) {
+                    state.items = state.items.filter(i => i.id !== id);
+                    syncToServer('deleteItem', { id: id });
                     closeModal();
-                    itemsData = itemsData.filter(i => i.id !== id);
-                    renderItemsList();
+                    renderLists();
                     renderCalendar();
-                    saveDataToServer('deleteItem', { id: id });
                     showToast('Data dihapus');
                 }
             });
         }
 
         function openModalForEdit(id) {
-            const item = itemsData.find(i => i.id === id);
+            const item = state.items.find(i => i.id === id);
             if (!item) return;
-
-            document.getElementById('modalTitle').innerText = 'Edit Data';
+            
+            document.getElementById('modalTitle').innerText = 'Edit Catatan';
             document.getElementById('itemId').value = item.id;
             document.getElementById('itemName').value = item.name;
             document.getElementById('itemStart').value = item.startDate;
             document.getElementById('itemExpiry').value = item.expiryDate || '';
-            document.getElementById('itemCategory').value = item.category || 'Lainnya';
-            document.getElementById('itemNotes').value = item.notes || '';
             
+            // Match category option explicitly because of emoji prefixes
+            const select = document.getElementById('itemCategory');
+            Array.from(select.options).forEach(opt => {
+                if(opt.value === item.category || opt.text.includes(item.category)) {
+                    select.value = opt.value;
+                }
+            });
+            if(!select.value) select.value = 'Lainnya'; // fallback
+
+            document.getElementById('itemNotes').value = item.notes || '';
             document.getElementById('btnDeleteItem').classList.remove('hidden');
             
-            openModal();
-        }
-
-        function openModal() {
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            // Sedikit delay agar animasi transisi terlihat
-            setTimeout(() => {
-                modal.classList.add('opacity-100');
-                modalContent.classList.remove('translate-y-full');
-            }, 10);
+            const modal = document.getElementById('itemModal');
+            const content = document.getElementById('itemModalContent');
+            modal.classList.remove('hidden'); modal.classList.add('flex');
+            setTimeout(() => { modal.classList.add('opacity-100'); content.classList.remove('translate-y-full'); }, 10);
         }
 
         function closeModal() {
-            modalContent.classList.add('translate-y-full');
-            modal.classList.remove('opacity-100');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }, 300); // Samakan dengan durasi transisi
+            const modal = document.getElementById('itemModal');
+            const content = document.getElementById('itemModalContent');
+            content.classList.add('translate-y-full'); modal.classList.remove('opacity-100');
+            setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 300);
         }
 
         // ==========================================
-        // KOMUNIKASI DATABASE (APPS SCRIPT)
+        // KOMUNIKASI SERVER (BACKGROUND SYNC)
         // ==========================================
-        function showSync(show) {
-            const ind = document.getElementById('syncIndicator');
-            if(show) ind.classList.remove('hidden');
-            else ind.classList.add('hidden');
+        function toggleSpinner(show) {
+            const spin = document.getElementById('syncIndicator');
+            if(show) spin.classList.remove('hidden'); else spin.classList.add('hidden');
         }
 
         async function loadDataFromServer() {
-            showSync(true);
+            if(!state.email) return;
+            toggleSpinner(true);
             try {
-                // Fetch GET
-                const res = await fetch(`${APPSCRIPT_URL}?action=getItems&userEmail=${encodeURIComponent(currentUserEmail)}`);
+                const res = await fetch(`${APPSCRIPT_URL}?action=getItems&userEmail=${encodeURIComponent(state.email)}`);
                 const json = await res.json();
-                
-                if (json.status === 'success') {
-                    itemsData = json.data;
-                    renderItemsList();
+                if (json && json.status === 'success') {
+                    state.items = json.data || [];
+                    renderLists();
                     renderCalendar();
                 }
             } catch (error) {
-                console.error("Gagal memuat data:", error);
-                showToast("Gagal sinkronisasi data");
+                console.error("Gagal load data, menggunakan cache lokal jika ada.", error);
             } finally {
-                showSync(false);
+                toggleSpinner(false);
             }
         }
 
-        async function saveDataToServer(action, payload) {
-            showSync(true);
+        async function syncToServer(action, payload) {
+            toggleSpinner(true);
             try {
                 const dataStr = JSON.stringify({
-                    action: action,
-                    userEmail: currentUserEmail,
+                    action: action, 
+                    userEmail: state.email,
                     item: action !== 'deleteItem' ? payload : undefined,
                     itemId: action === 'deleteItem' ? payload.id : undefined
                 });
-
-                // POST menggunakan CORS no-cors akan merepotkan untuk baca response, kita gunakan normal CORS 
-                // Pastikan Apps Script Web App di deploy dengan Who Has Access: Anyone
-                await fetch(APPSCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // text/plain menghindari preflight OPTIONS yang diblokir google script
-                    body: dataStr
+                
+                const res = await fetch(APPSCRIPT_URL, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Mode plain text hindari preflight CORS issues
+                    body: dataStr 
                 });
                 
-                // Karena kita Optimistic UI, tidak perlu tunggu balasan sukses untuk update layar.
+                const json = await res.json();
+                
+                // Jika itu addItem, server membalas dengan ID permanen (UUID dari spreadsheet).
+                // Kita perlu memperbarui ID temp menjadi ID permanen.
+                if(action === 'addItem' && json.status === 'success' && json.data && json.data.id) {
+                    const tempIndex = state.items.findIndex(i => i.id === payload.id);
+                    if(tempIndex !== -1) {
+                        state.items[tempIndex].id = json.data.id;
+                    }
+                }
+
             } catch (error) {
-                console.error("Gagal menyimpan ke server:", error);
-                // Idealnya di sini ada sistem retry jika gagal
+                console.error("Gagal sync ke server.", error);
             } finally {
-                showSync(false);
+                toggleSpinner(false);
             }
         }
 
         // ==========================================
-        // FITUR EXPORT CSV
+        // EXPORT DATA (CSV) DAN TOAST
         // ==========================================
         document.getElementById('btnExport').addEventListener('click', () => {
-            if(itemsData.length === 0) return showToast('Belum ada data');
+            if(!state.items || state.items.length === 0) return showToast('Belum ada data untuk diexport');
             
-            let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Nama Barang,Tgl Mulai,Tgl Expired,Kategori,Usia/Catatan\n";
-            
-            itemsData.forEach(row => {
-                // Hilangkan koma dari text agar tidak merusak kolom CSV
-                let n = row.name.replace(/,/g, '');
-                let c = (row.notes || '').replace(/,/g, '');
-                csvContent += `${n},${row.startDate},${row.expiryDate||''},${row.category||''},${c}\n`;
+            let csv = "data:text/csv;charset=utf-8,Nama Barang,Tgl Mulai Pakai,Tgl Expired/Ganti,Kategori,Catatan\n";
+            state.items.forEach(row => {
+                let rName = `"${row.name.replace(/"/g, '""')}"`;
+                let rNotes = `"${(row.notes||'').replace(/"/g, '""')}"`;
+                csv += `${rName},${row.startDate},${row.expiryDate||''},${row.category},${rNotes}\n`;
             });
             
-            const encodedUri = encodeURI(csvContent);
+            const encodedUri = encodeURI(csv);
             const link = document.createElement("a");
             link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `LifeTrack_${currentUserEmail.split('@')[0]}.csv`);
+            link.setAttribute("download", `Data_LifeTrack_${state.name}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
-            showToast('Data diekspor');
+            showToast('Data berhasil didownload');
         });
 
-        // ==========================================
-        // FUNGSI TOAST NOTIFIKASI
-        // ==========================================
-        let toastTimeout;
+        let toastTimer;
         function showToast(msg) {
-            const toastEl = document.getElementById('toast');
+            const toast = document.getElementById('toast');
             document.getElementById('toastMessage').innerText = msg;
-            
-            toastEl.classList.remove('opacity-0', 'translate-y-[-20px]', 'pointer-events-none');
-            toastEl.classList.add('opacity-100', 'translate-y-0');
-            
-            clearTimeout(toastTimeout);
-            toastTimeout = setTimeout(() => {
-                toastEl.classList.remove('opacity-100', 'translate-y-0');
-                toastEl.classList.add('opacity-0', 'translate-y-[-20px]', 'pointer-events-none');
+            toast.classList.remove('opacity-0', 'translate-y-[-20px]', 'pointer-events-none');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'translate-y-[-20px]', 'pointer-events-none');
             }, 3000);
         }
-
     </script>
 </body>
 </html>
