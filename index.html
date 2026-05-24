@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="id" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LifeTrack - Pencatat Usia Barang</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Phosphor Icons (Modern & Simple) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Tailwind Config untuk Mode Gelap & Warna Tema -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: '#4f46e5', // Indigo 600
+                        primaryHover: '#4338ca',
+                        surface: {
+                            light: '#ffffff',
+                            dark: '#1f2937' // Gray 800
+                        },
+                        bg: {
+                            light: '#f3f4f6', // Gray 100
+                            dark: '#111827' // Gray 900
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Styles & Utilities */
+        body { -webkit-tap-highlight-color: transparent; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); }
+        .dark .glass { background: rgba(31, 41, 55, 0.7); }
+        
+        /* Loading Spinner Kecil */
+        .loader {
+            border: 2px solid rgba(156, 163, 175, 0.3);
+            border-left-color: #4f46e5;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Animasi Transisi Halaman */
+        .page-transition { transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out; }
+        .page-enter { opacity: 0; transform: translateY(10px); }
+        .page-enter-active { opacity: 1; transform: translateY(0); }
+        
+        /* Safe area for mobile navigation bar */
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+    </style>
+</head>
+
+<body class="bg-bg-light dark:bg-bg-dark text-gray-800 dark:text-gray-200 transition-colors duration-300 antialiased font-sans flex justify-center h-screen overflow-hidden">
+
+    <!-- Container Utama (Membatasi lebar seperti tampilan mobile di desktop) -->
+    <div class="w-full max-w-md bg-surface-light dark:bg-surface-dark h-full relative flex flex-col shadow-2xl overflow-hidden">
+        
+        <!-- Notifikasi Toast -->
+        <div id="toast" class="absolute top-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full shadow-lg z-50 flex items-center gap-2 opacity-0 transition-opacity duration-300 pointer-events-none">
+            <i class="ph ph-info text-xl"></i>
+            <span id="toastMessage" class="text-sm font-medium">Notifikasi</span>
+        </div>
+
+        <div id="loginPage" class="absolute inset-0 z-40 bg-surface-light dark:bg-surface-dark flex flex-col items-center justify-center p-6 page-transition">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 bg-primary text-white rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-lg rotate-12 transform transition hover:rotate-0">
+                    <i class="ph ph-hourglass-high text-4xl"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">LifeTrack</h1>
+                <p class="text-gray-500 dark:text-gray-400 mt-2 text-sm">Pantau usia barang dan makananmu</p>
+            </div>
+            
+            <form id="loginForm" class="w-full space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                    <input type="email" id="emailInput" required placeholder="email@contoh.com" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all">
+                </div>
+                <button type="submit" class="w-full bg-primary hover:bg-primaryHover text-white font-semibold py-3 rounded-xl shadow-md transition-colors flex justify-center items-center gap-2">
+                    <span>Masuk / Daftar</span>
+                    <i class="ph ph-arrow-right"></i>
+                </button>
+                <p class="text-xs text-center text-gray-400 mt-4">Login dengan email untuk meload data Anda sendiri.</p>
+            </form>
+        </div>
+
+        <div id="appContainer" class="hidden flex-col h-full w-full opacity-0 page-transition relative">
+            
+            <!-- Header Ringkas (Hanya Nama Akun & Theme Toggle) -->
+            <header class="px-5 pt-6 pb-2 flex justify-between items-center z-10">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-purple-500 flex items-center justify-center text-white font-bold text-sm" id="userInitial">
+                        A
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span id="userNameDisplay" class="font-semibold text-lg text-gray-800 dark:text-white truncate max-w-[150px]">User</span>
+                        <!-- Indikator Loading Kecil -->
+                        <div id="syncIndicator" class="loader hidden" title="Sinkronisasi data..."></div>
+                    </div>
+                </div>
+                
+                <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300">
+                    <i id="themeIcon" class="ph ph-moon text-xl"></i>
+                </button>
+            </header>
+
+            <!-- Konten Dinamis Halaman (Scrollable) -->
+            <main class="flex-1 overflow-y-auto hide-scrollbar px-5 pb-24 relative" id="mainContent">
+                
+                <div id="viewHome" class="space-y-6 pb-10">
+                    
+                    <!-- Waktu dan Tanggal -->
+                    <div class="mt-2 text-center bg-gray-50 dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+                        <div id="currentTime" class="text-4xl font-light text-primary dark:text-indigo-400 tracking-tight">00:00</div>
+                        <div id="currentDate" class="text-sm text-gray-500 dark:text-gray-400 mt-1 font-medium">Senin, 1 Januari 2024</div>
+                    </div>
+
+                    <!-- Kalender Mini Bulan Ini -->
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-semibold text-sm">Kalender Bulan Ini</h3>
+                            <span class="text-xs text-gray-400" id="calMonthYear">Mei 2026</span>
+                        </div>
+                        <!-- Header Hari -->
+                        <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-medium text-gray-400 mb-2">
+                            <div>M</div><div>S</div><div>S</div><div>R</div><div>K</div><div>J</div><div>S</div>
+                        </div>
+                        <!-- Grid Tanggal -->
+                        <div id="calendarGrid" class="grid grid-cols-7 gap-1 text-center text-xs">
+                            <!-- JS akan mengisi ini -->
+                        </div>
+                    </div>
+
+                    <!-- Filter / Stats Ringkas -->
+                    <div class="flex justify-between items-end">
+                        <h2 class="text-xl font-bold">Daftar Barang</h2>
+                        <div class="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-md text-gray-600 dark:text-gray-300">
+                            Total: <span id="totalItemsCount" class="font-bold text-primary">0</span>
+                        </div>
+                    </div>
+
+                    <!-- List Barang -->
+                    <div id="itemsList" class="space-y-3">
+                        <!-- State Kosong -->
+                        <div id="emptyState" class="text-center py-10 hidden">
+                            <i class="ph ph-package text-5xl text-gray-300 dark:text-gray-600 mb-2"></i>
+                            <p class="text-gray-500 dark:text-gray-400 text-sm">Belum ada barang yang dicatat.</p>
+                        </div>
+                        <!-- Item List akan di-render di sini oleh JS -->
+                    </div>
+                </div>
+
+                <div id="viewCalendar" class="hidden space-y-4 pb-10">
+                    <h2 class="text-xl font-bold mt-2">Jadwal Expired</h2>
+                    <p class="text-sm text-gray-500">Tampilan kalender penuh akan segera hadir.</p>
+                    <!-- Placeholder untuk fitur kalender penuh -->
+                    <div class="bg-gray-50 dark:bg-gray-800 rounded-2xl p-6 text-center border border-dashed border-gray-300 dark:border-gray-600">
+                        <i class="ph ph-calendar-blank text-4xl text-gray-400 mb-2"></i>
+                        <p class="text-xs text-gray-500">Fitur sedang dalam pengembangan</p>
+                    </div>
+                </div>
+
+                <div id="viewProfile" class="hidden space-y-6 pb-10">
+                    <h2 class="text-xl font-bold mt-2">Profil Akun</h2>
+                    
+                    <div class="bg-gray-50 dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 flex items-center gap-4">
+                         <div class="w-14 h-14 rounded-full bg-gradient-to-tr from-primary to-purple-500 flex items-center justify-center text-white font-bold text-2xl" id="profileInitial">
+                            A
+                        </div>
+                        <div>
+                            <div class="text-sm text-gray-500">Email Login</div>
+                            <div class="font-semibold text-gray-800 dark:text-gray-200" id="profileEmail">user@email.com</div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <button id="btnExport" class="w-full flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                            <div class="flex items-center gap-3">
+                                <i class="ph ph-export text-xl text-green-500"></i>
+                                <span class="font-medium text-sm">Export Data (CSV)</span>
+                            </div>
+                            <i class="ph ph-caret-right text-gray-400"></i>
+                        </button>
+                        
+                        <button id="btnLogout" class="w-full flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition text-red-500">
+                            <div class="flex items-center gap-3">
+                                <i class="ph ph-sign-out text-xl"></i>
+                                <span class="font-medium text-sm">Keluar Akun</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+            </main>
+
+            <nav class="absolute bottom-0 w-full glass border-t border-gray-200 dark:border-gray-700 pb-safe z-30">
+                <div class="flex justify-around items-center h-16 px-2 relative">
+                    
+                    <button class="nav-item flex-1 flex flex-col items-center justify-center text-primary transition-colors" data-target="viewHome">
+                        <i class="ph-fill ph-house text-2xl mb-1"></i>
+                        <span class="text-[10px] font-medium">Beranda</span>
+                    </button>
+                    
+                    <button class="nav-item flex-1 flex flex-col items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors" data-target="viewCalendar">
+                        <i class="ph ph-calendar text-2xl mb-1"></i>
+                        <span class="text-[10px] font-medium">Kalender</span>
+                    </button>
+
+                    <!-- Spacing untuk Floating Action Button -->
+                    <div class="flex-1"></div>
+
+                    <button class="nav-item flex-1 flex flex-col items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors" data-target="viewProfile">
+                         <i class="ph ph-user text-2xl mb-1"></i>
+                        <span class="text-[10px] font-medium">Profil</span>
+                    </button>
+                     <div class="flex-1 flex flex-col items-center justify-center text-transparent cursor-default pointer-events-none">
+                        <!-- Spacer bayangan agar seimbang jika perlu -->
+                    </div>
+                </div>
+
+                <!-- Floating Action Button (FAB) Create di Tengah -->
+                <button id="btnOpenForm" class="absolute left-1/2 bottom-6 transform -translate-x-1/2 w-14 h-14 bg-primary hover:bg-primaryHover text-white rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform border-4 border-surface-light dark:border-surface-dark z-40">
+                    <i class="ph ph-plus text-2xl"></i>
+                </button>
+            </nav>
+
+        </div> <!-- End App Container -->
+
+        <div id="modalForm" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex flex-col justify-end opacity-0 pointer-events-none transition-opacity duration-300">
+            <!-- Modal Content (Sliding up) -->
+            <div id="modalContent" class="bg-white dark:bg-gray-800 w-full rounded-t-3xl p-6 transform translate-y-full transition-transform duration-300 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 id="modalTitle" class="text-xl font-bold">Tambah Catatan Baru</h3>
+                    <button id="btnCloseForm" class="p-2 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-600 dark:text-gray-300">
+                        <i class="ph ph-x"></i>
+                    </button>
+                </div>
+                
+                <form id="itemForm" class="space-y-4">
+                    <input type="hidden" id="itemId">
+                    
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Nama Barang / Makanan <span class="text-red-500">*</span></label>
+                        <input type="text" id="itemName" required class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-primary outline-none">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Tgl Mulai <span class="text-red-500">*</span></label>
+                            <input type="date" id="itemStartDate" required class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 outline-none text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Tgl Expired/Ganti</label>
+                            <input type="date" id="itemExpiryDate" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 outline-none text-sm">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Kategori</label>
+                        <select id="itemCategory" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 outline-none text-sm appearance-none">
+                            <option value="Makanan">Makanan</option>
+                            <option value="Minuman">Minuman</option>
+                            <option value="Kendaraan">Onderdil Kendaraan</option>
+                            <option value="Elektronik">Elektronik</option>
+                            <option value="Lainnya">Lainnya</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Catatan</label>
+                        <textarea id="itemNotes" rows="2" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 outline-none text-sm resize-none" placeholder="Contoh: Beli di minimarket depan"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-primary hover:bg-primaryHover text-white font-semibold py-3.5 rounded-xl shadow-md mt-2">
+                        Simpan Catatan
+                    </button>
+                    <!-- Tombol Hapus (Muncul saat edit) -->
+                    <button type="button" id="btnDeleteForm" class="hidden w-full bg-red-100 hover:bg-red-200 text-red-600 font-semibold py-3.5 rounded-xl mt-2 transition-colors">
+                        Hapus Data
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ==========================================
+        // KONFIGURASI PENTING
+        // ==========================================
+        // GANTI URL DI BAWAH INI DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA
+        const APPSCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw8-Kg8qIBKl3ePKeSiP92RrT1JjBU9HfH2jFDevQjYNF0iuum4_BQq4ws5ZmQq3HDGYA/exec'; 
+        
+        // State Aplikasi
+        let currentUserEmail = localStorage.getItem('lifeTrackUserEmail') || null;
+        let itemsData = [];
+        let currentTheme = localStorage.getItem('theme') || 'light';
+
+        // Referensi Elemen DOM Utama
+        const loginPage = document.getElementById('loginPage');
+        const appContainer = document.getElementById('appContainer');
+        const loginForm = document.getElementById('loginForm');
+        const syncIndicator = document.getElementById('syncIndicator');
+        const toastEl = document.getElementById('toast');
+        const toastMsg = document.getElementById('toastMessage');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            updateDateTime();
+            setInterval(updateDateTime, 1000); // Update jam tiap detik
+
+            if (currentUserEmail) {
+                showApp();
+                loadDataFromServer();
+            } else {
+                loginPage.classList.add('page-enter-active');
+            }
+
+            // Setup Navigation
+            document.querySelectorAll('.nav-item').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const targetView = e.currentTarget.getAttribute('data-target');
+                    switchView(targetView);
+                    
+                    // Update icon active state
+                    document.querySelectorAll('.nav-item').forEach(b => {
+                        b.classList.remove('text-primary');
+                        b.classList.add('text-gray-400');
+                        const icon = b.querySelector('i');
+                        icon.className = icon.className.replace('ph-fill', 'ph');
+                    });
+                    e.currentTarget.classList.remove('text-gray-400');
+                    e.currentTarget.classList.add('text-primary');
+                    const iconActive = e.currentTarget.querySelector('i');
+                    iconActive.className = iconActive.className.replace('ph ', 'ph-fill ');
+                });
+            });
+        });
+
+        // Event Listener Login
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('emailInput').value.trim().toLowerCase();
+            if (email) {
+                currentUserEmail = email;
+                localStorage.setItem('lifeTrackUserEmail', email);
+                showApp();
+                loadDataFromServer();
+            }
+        });
+
+        // Event Listener Logout
+        document.getElementById('btnLogout').addEventListener('click', () => {
+            localStorage.removeItem('lifeTrackUserEmail');
+            currentUserEmail = null;
+            itemsData = [];
+            renderItemsList(); // Bersihkan list
+            
+            // Animasi keluar
+            appContainer.classList.remove('page-enter-active');
+            setTimeout(() => {
+                appContainer.classList.add('hidden');
+                loginPage.classList.remove('hidden');
+                setTimeout(() => loginPage.classList.add('page-enter-active'), 50);
+            }, 300);
+        });
+
+        // Tampilkan Notifikasi Toast
+        function showToast(message, isError = false) {
+            toastMsg.textContent = message;
+            if(isError) {
+                toastEl.classList.replace('bg-gray-800', 'bg-red-600');
+            } else {
+                toastEl.classList.replace('bg-red-600', 'bg-gray-800');
+            }
+            toastEl.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toastEl.classList.add('opacity-0', 'pointer-events-none');
+            }, 3000);
+        }
+
+        function initTheme() {
+            if (currentTheme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                document.getElementById('themeIcon').classList.replace('ph-moon', 'ph-sun');
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('themeIcon').classList.replace('ph-sun', 'ph-moon');
+            }
+        }
+
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            const icon = document.getElementById('themeIcon');
+            if (document.documentElement.classList.contains('dark')) {
+                localStorage.setItem('theme', 'dark');
+                icon.classList.replace('ph-moon', 'ph-sun');
+            } else {
+                localStorage.setItem('theme', 'light');
+                icon.classList.replace('ph-sun', 'ph-moon');
+            }
+        });
+
+        function updateDateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':');
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const dateStr = now.toLocaleDateString('id-ID', dateOptions);
+            
+            document.getElementById('currentTime').textContent = timeStr;
+            document.getElementById('currentDate').textContent = dateStr;
+        }
+
+        function renderMiniCalendar() {
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = ''; // Kosongkan
+            
+            const now = new Date();
+            const month = now.getMonth();
+            const year = now.getFullYear();
+            
+            document.getElementById('calMonthYear').textContent = now.toLocaleDateString('id-ID', {month: 'long', year: 'numeric'});
+
+            const firstDay = new Date(year, month, 1).getDay(); // 0(Sun) - 6(Sat)
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            // Adjust to start on Monday (1)
+            let startOffset = firstDay === 0 ? 6 : firstDay - 1;
+
+            // Empty cells before start
+            for(let i = 0; i < startOffset; i++) {
+                grid.innerHTML += `<div class="p-1"></div>`;
+            }
+
+            // Days of month
+            const todayDate = now.getDate();
+            for(let d = 1; d <= daysInMonth; d++) {
+                let isToday = d === todayDate;
+                let hasExpiry = itemsData.some(item => {
+                    if(!item.expiryDate) return false;
+                    const expDate = new Date(item.expiryDate);
+                    return expDate.getDate() === d && expDate.getMonth() === month && expDate.getFullYear() === year;
+                });
+
+                let classes = `p-1 flex items-center justify-center rounded-full w-6 h-6 mx-auto transition-colors `;
+                
+                if (isToday) {
+                    classes += `bg-primary text-white font-bold`;
+                } else if (hasExpiry) {
+                    classes += `bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 font-semibold border border-red-300 dark:border-red-700`;
+                } else {
+                    classes += `text-gray-700 dark:text-gray-300`;
+                }
+
+                grid.innerHTML += `<div class=""><div class="${classes}">${d}</div></div>`;
+            }
+        }
+
+        function showApp() {
+            loginPage.classList.add('hidden');
+            loginPage.classList.remove('page-enter-active');
+            
+            appContainer.classList.remove('hidden');
+            // Sedikit delay agar display block terapkan sebelum opacity animasi
+            setTimeout(() => {
+                appContainer.classList.add('page-enter-active');
+                
+                // Set Header Info
+                const userInitial = currentUserEmail.charAt(0).toUpperCase();
+                document.getElementById('userInitial').textContent = userInitial;
+                document.getElementById('profileInitial').textContent = userInitial;
+                
+                const displayEmail = currentUserEmail.split('@')[0];
+                document.getElementById('userNameDisplay').textContent = displayEmail;
+                document.getElementById('profileEmail').textContent = currentUserEmail;
+                
+                renderMiniCalendar();
+            }, 50);
+        }
+
+        function switchView(viewId) {
+            ['viewHome', 'viewCalendar', 'viewProfile'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(viewId).classList.remove('hidden');
+        }
+
+        const modalForm = document.getElementById('modalForm');
+        const modalContent = document.getElementById('modalContent');
+        const formEl = document.getElementById('itemForm');
+
+        document.getElementById('btnOpenForm').addEventListener('click', () => openFormModal());
+        document.getElementById('btnCloseForm').addEventListener('click', closeFormModal);
+
+        function openFormModal(itemToEdit = null) {
+            formEl.reset();
+            document.getElementById('itemId').value = '';
+            document.getElementById('btnDeleteForm').classList.add('hidden');
+            
+            // Set default date to today
+            document.getElementById('itemStartDate').valueAsDate = new Date();
+
+            if (itemToEdit) {
+                document.getElementById('modalTitle').textContent = 'Edit Catatan';
+                document.getElementById('itemId').value = itemToEdit.id;
+                document.getElementById('itemName').value = itemToEdit.name;
+                document.getElementById('itemStartDate').value = itemToEdit.startDate.split('T')[0]; // Format yyyy-mm-dd
+                if(itemToEdit.expiryDate) document.getElementById('itemExpiryDate').value = itemToEdit.expiryDate.split('T')[0];
+                if(itemToEdit.category) document.getElementById('itemCategory').value = itemToEdit.category;
+                if(itemToEdit.notes) document.getElementById('itemNotes').value = itemToEdit.notes;
+                
+                document.getElementById('btnDeleteForm').classList.remove('hidden');
+            } else {
+                document.getElementById('modalTitle').textContent = 'Tambah Catatan Baru';
+            }
+
+            modalForm.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => modalContent.classList.remove('translate-y-full'), 10);
+        }
+
+        function closeFormModal() {
+            modalContent.classList.add('translate-y-full');
+            setTimeout(() => modalForm.classList.add('opacity-0', 'pointer-events-none'), 300);
+        }
+
+        // Kirim request ke Apps Script
+        async function fetchAPI(action, payload = {}) {
+            if (APPSCRIPT_URL.includes('YOUR_SPREADSHEET_ID_HERE') || APPSCRIPT_URL === '') {
+                 showToast('Error: URL Apps Script belum di-set!', true);
+                 return null;
+            }
+
+            syncIndicator.classList.remove('hidden');
+            
+            try {
+                // Untuk menghindari CORS preflight issues yang rumit di Apps Script murni, 
+                // kita menggunakan method POST dengan JSON payload.
+                const response = await fetch(APPSCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 'text/plain' trick for GAS CORS
+                    body: JSON.stringify({
+                        action: action,
+                        userEmail: currentUserEmail,
+                        ...payload
+                    })
+                });
+                
+                const result = await response.json();
+                return result;
+            } catch (error) {
+                console.error('API Error:', error);
+                showToast('Koneksi bermasalah. Data tersimpan lokal.', true);
+                return null;
+            } finally {
+                syncIndicator.classList.add('hidden');
+            }
+        }
+
+        async function loadDataFromServer() {
+            const res = await fetchAPI('getItems');
+            if (res && res.status === 'success') {
+                itemsData = res.data;
+                renderItemsList();
+                renderMiniCalendar(); // Update kalender indikator
+            }
+        }
+
+        // Handle Submit Form
+        formEl.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const itemId = document.getElementById('itemId').value;
+            const itemData = {
+                name: document.getElementById('itemName').value,
+                startDate: document.getElementById('itemStartDate').value,
+                expiryDate: document.getElementById('itemExpiryDate').value,
+                category: document.getElementById('itemCategory').value,
+                notes: document.getElementById('itemNotes').value
+            };
+
+            closeFormModal(); // Langsung tutup agar responsif
+
+            if (itemId) {
+                // UPDATE
+                itemData.id = itemId;
+                // Update local optimistically
+                const index = itemsData.findIndex(i => i.id === itemId);
+                if(index !== -1) {
+                    itemsData[index] = {...itemsData[index], ...itemData};
+                    renderItemsList();
+                }
+                
+                // Kirim Background
+                fetchAPI('updateItem', { item: itemData }).then(res => {
+                    if(res && res.status === 'success') showToast('Catatan diperbarui');
+                });
+
+            } else {
+                // CREATE
+                const tempId = 'temp_' + Date.now();
+                itemData.id = tempId;
+                
+                // Insert local optimistically
+                itemsData.unshift(itemData); // Tambah di atas
+                renderItemsList();
+                renderMiniCalendar();
+
+                // Kirim Background
+                fetchAPI('addItem', { item: itemData }).then(res => {
+                    if (res && res.status === 'success') {
+                        // Replace temp ID with real ID from DB
+                        const index = itemsData.findIndex(i => i.id === tempId);
+                        if(index !== -1) itemsData[index].id = res.data.id;
+                        showToast('Catatan ditambahkan');
+                    }
+                });
+            }
+        });
+
+        // Handle Delete
+        document.getElementById('btnDeleteForm').addEventListener('click', () => {
+            const itemId = document.getElementById('itemId').value;
+            if(!itemId) return;
+
+            // Confirm custom (Bukan alert bawaan)
+            if(confirm('Yakin ingin menghapus catatan ini?')) {
+                closeFormModal();
+                
+                // Delete local
+                itemsData = itemsData.filter(i => i.id !== itemId);
+                renderItemsList();
+                renderMiniCalendar();
+                
+                // Background delete
+                fetchAPI('deleteItem', { itemId: itemId }).then(res => {
+                    if(res && res.status === 'success') showToast('Catatan dihapus');
+                });
+            }
+        });
+
+        function calculateAgeAndStatus(startDate, expiryDate) {
+            const start = new Date(startDate);
+            const now = new Date();
+            // Reset time to compare just dates
+            now.setHours(0,0,0,0);
+            
+            // Usia pemakaian (dari tgl mulai sampai sekarang)
+            const diffTimeAge = Math.abs(now - start);
+            const diffDaysAge = Math.ceil(diffTimeAge / (1000 * 60 * 60 * 24));
+            
+            let ageText = '';
+            if(now < start) ageText = 'Belum mulai';
+            else if (diffDaysAge === 0) ageText = 'Baru hari ini';
+            else if (diffDaysAge < 30) ageText = `${diffDaysAge} Hari`;
+            else if (diffDaysAge < 365) ageText = `${Math.floor(diffDaysAge/30)} Bln ${diffDaysAge%30} Hr`;
+            else ageText = `${Math.floor(diffDaysAge/365)} Thn ${Math.floor((diffDaysAge%365)/30)} Bln`;
+
+            // Status Expired
+            let statusObj = { text: '', colorClass: 'text-gray-500', bgClass: 'bg-gray-100 dark:bg-gray-700', progress: 0 };
+            
+            if (expiryDate) {
+                const end = new Date(expiryDate);
+                const totalDuration = end - start;
+                const elapsed = now - start;
+                
+                let percent = (elapsed / totalDuration) * 100;
+                if (percent < 0) percent = 0;
+                if (percent > 100) percent = 100;
+                statusObj.progress = percent;
+
+                const diffTimeEnd = end - now;
+                const diffDaysEnd = Math.ceil(diffTimeEnd / (1000 * 60 * 60 * 24));
+
+                if (diffDaysEnd < 0) {
+                    statusObj.text = 'Sudah Expired / Lewat';
+                    statusObj.colorClass = 'text-red-600 dark:text-red-400';
+                    statusObj.bgClass = 'bg-red-100 dark:bg-red-900/30';
+                } else if (diffDaysEnd <= 7) {
+                    statusObj.text = `Sisa ${diffDaysEnd} Hari!`;
+                    statusObj.colorClass = 'text-orange-600 dark:text-orange-400';
+                    statusObj.bgClass = 'bg-orange-100 dark:bg-orange-900/30';
+                } else {
+                    statusObj.text = `Sisa ${diffDaysEnd} Hari`;
+                    statusObj.colorClass = 'text-green-600 dark:text-green-400';
+                    statusObj.bgClass = 'bg-green-100 dark:bg-green-900/30';
+                }
+            }
+
+            return { ageText, statusObj };
+        }
+
+        function getCategoryIcon(category) {
+            switch(category) {
+                case 'Makanan': return '<i class="ph ph-hamburger text-yellow-500"></i>';
+                case 'Minuman': return '<i class="ph ph-coffee text-blue-500"></i>';
+                case 'Kendaraan': return '<i class="ph ph-car-profile text-red-500"></i>';
+                case 'Elektronik': return '<i class="ph ph-laptop text-purple-500"></i>';
+                default: return '<i class="ph ph-tag text-gray-500"></i>';
+            }
+        }
+
+        function renderItemsList() {
+            const listEl = document.getElementById('itemsList');
+            const emptyState = document.getElementById('emptyState');
+            
+            document.getElementById('totalItemsCount').textContent = itemsData.length;
+
+            if (itemsData.length === 0) {
+                listEl.innerHTML = '';
+                listEl.appendChild(emptyState);
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            let html = '';
+
+            // Urutkan: yang mau expired di atas, sisanya berdasar input terbaru
+            const sortedData = [...itemsData].sort((a, b) => {
+                if(a.expiryDate && b.expiryDate) return new Date(a.expiryDate) - new Date(b.expiryDate);
+                if(a.expiryDate) return -1;
+                if(b.expiryDate) return 1;
+                return new Date(b.startDate) - new Date(a.startDate);
+            });
+
+            sortedData.forEach(item => {
+                const { ageText, statusObj } = calculateAgeAndStatus(item.startDate, item.expiryDate);
+                const icon = getCategoryIcon(item.category);
+                
+                // Format tgl untuk display detail
+                const fmtStart = new Date(item.startDate).toLocaleDateString('id-ID', {day:'numeric', month:'short'});
+                const fmtEnd = item.expiryDate ? new Date(item.expiryDate).toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'2-digit'}) : '-';
+
+                html += `
+                <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 cursor-pointer hover:shadow-md transition-shadow relative overflow-hidden group" onclick='openEditItem(${JSON.stringify(item).replace(/'/g, "&apos;")})'>
+                    
+                    ${item.expiryDate ? `
+                    <!-- Progress Bar Indikator Usia di latar belakang -->
+                    <div class="absolute bottom-0 left-0 h-1 ${statusObj.bgClass} w-full">
+                        <div class="h-full ${statusObj.colorClass.replace('text-', 'bg-')} transition-all duration-1000" style="width: ${statusObj.progress}%"></div>
+                    </div>` : ''}
+
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-700 flex items-center justify-center text-xl">
+                                ${icon}
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-gray-800 dark:text-gray-100 text-base leading-tight">${item.name}</h3>
+                                <p class="text-[10px] text-gray-400 mt-0.5">${item.category} • Mulai: ${fmtStart}</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Badge Status Expired jika ada -->
+                        ${item.expiryDate ? `
+                        <div class="px-2 py-1 rounded-md text-[10px] font-bold ${statusObj.bgClass} ${statusObj.colorClass}">
+                            ${statusObj.text}
+                        </div>` : ''}
+                    </div>
+
+                    <div class="flex justify-between items-end mt-3">
+                        <div>
+                            <div class="text-[10px] text-gray-500 mb-0.5">Usia Pemakaian</div>
+                            <!-- TEKS USIA DIPERBESAR SEBAGAI FITUR UTAMA -->
+                            <div class="text-xl sm:text-2xl font-black text-primary dark:text-indigo-400 tracking-tight">
+                                ${ageText}
+                            </div>
+                        </div>
+                        
+                        <div class="text-right flex flex-col justify-end">
+                             ${item.notes ? `
+                             <div class="text-xs text-gray-400 max-w-[120px] truncate mb-1 italic">
+                                "${item.notes}"
+                             </div>` : ''}
+                             <div class="text-xs text-gray-400 flex items-center justify-end gap-1 group-hover:text-primary transition-colors">
+                                Edit <i class="ph ph-pencil-simple text-[10px]"></i>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+                `;
+            });
+
+            listEl.innerHTML = html;
+            // append empty state kembali (disembunyikan)
+            listEl.appendChild(emptyState);
+        }
+
+        // Wrapper helper untuk dipanggil dari inline onclick HTML
+        window.openEditItem = function(itemObj) {
+            openFormModal(itemObj);
+        };
+
+        document.getElementById('btnExport').addEventListener('click', () => {
+            if(itemsData.length === 0) {
+                showToast('Tidak ada data untuk diekspor');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            // Header
+            csvContent += "Nama Barang,Kategori,Tgl Mulai,Tgl Expired,Usia/Status,Catatan\n";
+            
+            itemsData.forEach(row => {
+                const { ageText, statusObj } = calculateAgeAndStatus(row.startDate, row.expiryDate);
+                const statusStr = row.expiryDate ? statusObj.text : ageText;
+                
+                // Handle commas in notes/names by wrapping in quotes
+                const name = `"${row.name || ''}"`;
+                const notes = `"${row.notes || ''}"`;
+                
+                csvContent += `${name},${row.category},${row.startDate},${row.expiryDate||''},"${statusStr}",${notes}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `LifeTrack_Data_${currentUserEmail}_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link); // Required for FF
+            
+            link.click();
+            document.body.removeChild(link);
+            showToast('Data berhasil didownload');
+        });
+
+    </script>
+</body>
+</html>
