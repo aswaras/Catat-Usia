@@ -1,756 +1,1676 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Konveksi Pro</title>
-
-<link rel="manifest" href="manifest.json">
-
-<meta name="theme-color" content="#2563eb">
-<meta name="apple-mobile-web-app-capable" content="yes">
-
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
-
-body{
-    font-family:'Plus Jakarta Sans',sans-serif;
-    background:#f8fafc;
-}
-
-:root{
-    --primary:#2563eb;
-}
-
-.tab-content{
-    display:none;
-}
-
-.tab-content.active{
-    display:block;
-}
-
-.dynamic-theme{
-    background:var(--primary);
-}
-
-.dynamic-text{
-    color:var(--primary);
-}
-
-.glass{
-    background:rgba(255,255,255,.9);
-    backdrop-filter:blur(12px);
-}
-
-.nav-bar{
-    display:grid;
-    grid-template-columns:repeat(5,1fr);
-    align-items:center;
-    width:100%;
-    height:70px;
-}
-
-.nav-btn{
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    color:#94a3b8;
-    font-size:9px;
-    font-weight:700;
-}
-
-.nav-btn.active{
-    color:var(--primary);
-}
-
-.center-wrapper{
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    position:relative;
-}
-
-.center-fab{
-    position:absolute;
-    top:-28px;
-    width:60px;
-    height:60px;
-    border-radius:999px;
-    background:var(--primary);
-    color:white;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    border:4px solid white;
-    box-shadow:0 10px 25px rgba(0,0,0,.2);
-}
-
-#mini-loader{
-    position:fixed;
-    top:16px;
-    right:16px;
-    z-index:99999;
-    display:none;
-}
-
-.loader{
-    width:42px;
-    height:42px;
-    border-radius:999px;
-    border:4px solid #e2e8f0;
-    border-top:4px solid var(--primary);
-    animation:spin 1s linear infinite;
-    background:white;
-}
-
-@keyframes spin{
-    to{
-        transform:rotate(360deg);
-    }
-}
-</style>
-</head>
-
-<body class="pb-28">
-
-<!-- LOADER -->
-
-<div id="mini-loader">
-    <div class="loader"></div>
-</div>
-
-<!-- INSTALL -->
-
-<div id="install-popup" class="hidden fixed bottom-24 left-4 right-4 bg-white border rounded-3xl p-5 shadow-2xl z-[9999]">
-    <div class="flex items-center justify-between">
-        <div>
-            <h3 class="font-black text-sm">Install App</h3>
-            <p class="text-xs text-slate-500">Pasang ke homescreen</p>
-        </div>
-
-        <button id="btn-install"
-            class="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">
-            Install
-        </button>
-    </div>
-</div>
-
-<!-- LOGIN -->
-
-<div id="auth-page"
-    class="fixed inset-0 bg-slate-100 z-[999999] flex items-center justify-center p-5">
-
-    <div class="bg-white border shadow-xl rounded-[2rem] p-6 w-full max-w-sm">
-
-        <div class="text-center mb-6">
-            <h1 class="text-3xl font-black text-blue-600 uppercase">
-                Konveksi Pro
-            </h1>
-
-            <p class="text-[10px] text-slate-400 font-bold tracking-[0.3em] uppercase">
-                by meganeura.id
-            </p>
-        </div>
-
-        <div class="grid grid-cols-2 gap-2 mb-5">
-
-            <button id="tab-login"
-                onclick="switchAuth('login')"
-                class="bg-blue-600 text-white py-3 rounded-2xl text-xs font-bold uppercase">
-                Masuk
-            </button>
-
-            <button id="tab-register"
-                onclick="switchAuth('register')"
-                class="bg-slate-100 text-slate-500 py-3 rounded-2xl text-xs font-bold uppercase">
-                Daftar
-            </button>
-
-        </div>
-
-        <!-- LOGIN FORM -->
-
-        <div id="login-form">
-
-            <input id="login-email"
-                type="email"
-                placeholder="Email"
-                class="w-full p-4 rounded-2xl bg-slate-50 mb-3 outline-none">
-
-            <input id="login-password"
-                type="password"
-                placeholder="Password"
-                class="w-full p-4 rounded-2xl bg-slate-50 mb-4 outline-none">
-
-            <button onclick="login()"
-                class="w-full py-4 rounded-2xl bg-slate-900 text-white text-xs font-bold uppercase">
-                Masuk
-            </button>
-
-        </div>
-
-        <!-- REGISTER FORM -->
-
-        <div id="register-form" class="hidden">
-
-            <input id="reg-name"
-                type="text"
-                placeholder="Nama"
-                class="w-full p-4 rounded-2xl bg-slate-50 mb-3 outline-none">
-
-            <input id="reg-email"
-                type="email"
-                placeholder="Email"
-                class="w-full p-4 rounded-2xl bg-slate-50 mb-3 outline-none">
-
-            <input id="reg-password"
-                type="password"
-                placeholder="Password"
-                class="w-full p-4 rounded-2xl bg-slate-50 mb-4 outline-none">
-
-            <button onclick="register()"
-                class="w-full py-4 rounded-2xl bg-blue-600 text-white text-xs font-bold uppercase">
-                Daftar
-            </button>
-
-        </div>
-
-    </div>
-
-</div>
-
-<!-- HEADER -->
-
-<header class="sticky top-0 glass border-b px-5 py-4 z-50">
-
-    <div class="flex justify-between items-center">
-
-        <div>
-            <h1 class="font-black text-xl dynamic-text uppercase">
-                Konveksi Pro
-            </h1>
-
-            <p class="text-[9px] text-slate-400 font-bold uppercase tracking-[0.3em]">
-                by meganeura.id
-            </p>
-        </div>
-
-        <button onclick="logout()"
-            class="text-[10px] px-4 py-2 bg-red-50 text-red-600 rounded-xl font-bold uppercase">
-            Logout
-        </button>
-
-    </div>
-
-</header>
-
-<!-- MAIN -->
-
-<main class="max-w-md mx-auto p-4">
-
-    <!-- HOME -->
-
-    <section id="page-home" class="tab-content active space-y-4">
-
-        <div class="grid grid-cols-3 gap-2">
-
-            <div class="bg-white border rounded-3xl p-4 text-center">
-                <p class="text-[9px] uppercase text-slate-400 font-bold">
-                    Omzet
-                </p>
-
-                <h2 id="stat-omzet" class="font-black text-sm mt-1">
-                    Rp 0
-                </h2>
-            </div>
-
-            <div class="bg-white border rounded-3xl p-4 text-center">
-                <p class="text-[9px] uppercase text-slate-400 font-bold">
-                    Customer
-                </p>
-
-                <h2 id="stat-customer" class="font-black text-sm mt-1">
-                    0
-                </h2>
-            </div>
-
-            <div class="bg-white border rounded-3xl p-4 text-center">
-                <p class="text-[9px] uppercase text-slate-400 font-bold">
-                    Pcs
-                </p>
-
-                <h2 id="stat-pcs" class="font-black text-sm mt-1">
-                    0
-                </h2>
-            </div>
-
-        </div>
-
-        <div class="bg-white border rounded-[2rem] p-5">
-            <canvas id="chart" height="180"></canvas>
-        </div>
-
-    </section>
-
-    <!-- ADD -->
-
-    <section id="page-add" class="tab-content space-y-4">
-
-        <div class="bg-white border rounded-[2rem] p-5 space-y-3">
-
-            <input id="nama"
-                type="text"
-                placeholder="Nama pelanggan"
-                class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
-
-            <input id="deadline"
-                type="date"
-                class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
-
-            <input id="qty"
-                type="number"
-                placeholder="Jumlah pcs"
-                class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
-
-            <input id="harga"
-                type="number"
-                placeholder="Harga total"
-                class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
-
-            <input id="dp"
-                type="number"
-                placeholder="DP"
-                class="w-full p-4 bg-slate-50 rounded-2xl outline-none">
-
-            <button onclick="saveOrder()"
-                class="w-full py-4 rounded-2xl bg-slate-900 text-white text-xs font-bold uppercase">
-                Simpan Pesanan
-            </button>
-
-        </div>
-
-    </section>
-
-    <!-- LIST -->
-
-    <section id="page-list" class="tab-content">
-
-        <div id="orders" class="space-y-3"></div>
-
-    </section>
-
-</main>
-
-<!-- NAV -->
-
-<nav class="fixed bottom-0 left-0 right-0 glass border-t h-[75px] flex items-center px-4">
-
-    <div class="nav-bar">
-
-        <button onclick="navTo('home')"
-            id="nav-home"
-            class="nav-btn active">
-            Home
-        </button>
-
-        <button onclick="navTo('list')"
-            id="nav-list"
-            class="nav-btn">
-            Data
-        </button>
-
-        <div class="center-wrapper">
-
-            <button onclick="navTo('add')"
-                class="center-fab">
-                +
-            </button>
-
-        </div>
-
-        <button class="nav-btn">
-            Timeline
-        </button>
-
-        <button class="nav-btn">
-            Setup
-        </button>
-
-    </div>
-
-</nav>
-
-<script>
-
-const API_URL = "https://script.google.com/macros/s/AKfycbyRVnQ0ZTdRcziRxyrWJOkDHNerGj8qiMssSVCeYdbNRqOxDsxQCm2_1agGkkKc7fHLxw/exec";
-
-let db = {
-    orders:[]
-};
-
-let currentUser = JSON.parse(localStorage.getItem('kp_user')) || null;
-
-let deferredPrompt;
-
-function showLoader(){
-    document.getElementById('mini-loader').style.display='block';
-}
-
-function hideLoader(){
-    document.getElementById('mini-loader').style.display='none';
-}
-
-async function api(params={}){
-
-    showLoader();
-
-    try{
-
-        const query = new URLSearchParams(params).toString();
-
-        const res = await fetch(`${API_URL}?${query}`);
-
-        const data = await res.json();
-
-        return data;
-
-    }catch(err){
-
-        console.log(err);
-
-        alert('Koneksi gagal');
-
-        return {
-            success:false
-        };
-
-    }finally{
-
-        hideLoader();
-    }
-}
-
-function switchAuth(type){
-
-    document.getElementById('login-form')
-        .classList.toggle('hidden', type !== 'login');
-
-    document.getElementById('register-form')
-        .classList.toggle('hidden', type !== 'register');
-}
-
-async function register(){
-
-    const nama = document.getElementById('reg-name').value;
-    const email = document.getElementById('reg-email').value;
-    const password = document.getElementById('reg-password').value;
-
-    const res = await api({
-        action:'register',
-        nama,
-        email,
-        password
-    });
-
-    if(res.success){
-
-        alert('Register berhasil');
-
-        switchAuth('login');
-
-    }else{
-
-        alert(res.message);
-    }
-}
-
-async function login(){
-
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
-
-    const res = await api({
-        action:'login',
-        email,
-        password
-    });
-
-    if(res.success){
-
-        currentUser = res.user;
-
-        localStorage.setItem('kp_user', JSON.stringify(currentUser));
-
-        document.getElementById('auth-page')
-            .classList.add('hidden');
-
-        loadOrders();
-
-    }else{
-
-        alert(res.message);
-    }
-}
-
-function logout(){
-
-    localStorage.removeItem('kp_user');
-
-    location.reload();
-}
-
-async function loadOrders(){
-
-    const res = await api({
-        action:'getOrders',
-        user_id:currentUser.id
-    });
-
-    if(res.success){
-
-        db.orders = res.orders;
-
-        renderOrders();
-
-        refreshHome();
-    }
-}
-
-async function saveOrder(){
-
-    const nama = document.getElementById('nama').value;
-    const deadline = document.getElementById('deadline').value;
-    const qty = Number(document.getElementById('qty').value);
-    const total = Number(document.getElementById('harga').value);
-    const dp = Number(document.getElementById('dp').value);
-
-    const order = {
-        id:Date.now().toString(),
-        user_id:currentUser.id,
-        nama,
-        total,
-        dp,
-        sisa:total-dp,
-        tgl:new Date().toLocaleDateString('id-ID'),
-        deadline,
-        items:[
-            {
-                qty
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expiry Tracker - Track Your Item's Age</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --bg-light: #ffffff;
+            --bg-light-secondary: #f9fafb;
+            --text-light: #1f2937;
+            --text-light-secondary: #6b7280;
+            --border-light: #e5e7eb;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            
+            --bg-dark: #0f172a;
+            --bg-dark-secondary: #1e293b;
+            --text-dark: #f1f5f9;
+            --text-dark-secondary: #cbd5e1;
+            --border-dark: #334155;
+            --shadow-dark: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        body.dark-mode {
+            --primary: #818cf8;
+            --bg-light: var(--bg-dark);
+            --bg-light-secondary: var(--bg-dark-secondary);
+            --text-light: var(--text-dark);
+            --text-light-secondary: var(--text-dark-secondary);
+            --border-light: var(--border-dark);
+            --shadow: var(--shadow-dark);
+        }
+
+        html, body {
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-light);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* HEADER */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+            z-index: 100;
+        }
+
+        .header-title {
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+
+        .header-user {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .icon-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            font-size: 18px;
+        }
+
+        .icon-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        .loading-indicator {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* MAIN CONTENT */
+        .main {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 80px;
+        }
+
+        /* PAGES */
+        .page {
+            display: none;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
             }
-        ]
-    };
-
-    const res = await api({
-        action:'saveOrder',
-        id:order.id,
-        user_id:order.user_id,
-        nama:order.nama,
-        total:order.total,
-        dp:order.dp,
-        sisa:order.sisa,
-        tgl:order.tgl,
-        deadline:order.deadline,
-        items_json:JSON.stringify(order.items)
-    });
-
-    if(res.success){
-
-        db.orders.unshift(order);
-
-        renderOrders();
-
-        refreshHome();
-
-        alert('Pesanan berhasil disimpan');
-
-        navTo('list');
-    }
-}
-
-async function deleteOrder(id){
-
-    if(!confirm('Hapus pesanan?')) return;
-
-    const res = await api({
-        action:'deleteOrder',
-        id
-    });
-
-    if(res.success){
-
-        db.orders = db.orders.filter(x=>x.id !== id);
-
-        renderOrders();
-
-        refreshHome();
-    }
-}
-
-function renderOrders(){
-
-    document.getElementById('orders').innerHTML =
-        db.orders.map(o=>`
-
-        <div class="bg-white border rounded-[2rem] p-5">
-
-            <div class="flex justify-between items-center mb-3">
-
-                <div>
-
-                    <h3 class="font-black text-sm uppercase">
-                        ${o.nama}
-                    </h3>
-
-                    <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">
-                        ${o.deadline}
-                    </p>
-
-                </div>
-
-                <div class="text-right">
-
-                    <h4 class="font-black text-sm text-blue-600">
-                        Rp ${format(o.total)}
-                    </h4>
-
-                </div>
-
-            </div>
-
-            <div class="flex gap-2">
-
-                <button onclick="deleteOrder('${o.id}')"
-                    class="flex-1 py-3 rounded-2xl bg-red-50 text-red-600 text-xs font-bold uppercase">
-                    Hapus
-                </button>
-
-            </div>
-
-        </div>
-
-    `).join('');
-}
-
-function refreshHome(){
-
-    const omzet = db.orders.reduce((a,b)=>a+b.total,0);
-
-    const pcs = db.orders.reduce((a,b)=>a+b.items[0].qty,0);
-
-    document.getElementById('stat-omzet').innerText =
-        'Rp ' + format(omzet);
-
-    document.getElementById('stat-customer').innerText =
-        db.orders.length;
-
-    document.getElementById('stat-pcs').innerText =
-        pcs;
-
-    drawChart();
-}
-
-function drawChart(){
-
-    const ctx = document.getElementById('chart');
-
-    if(window.chart){
-        window.chart.destroy();
-    }
-
-    window.chart = new Chart(ctx,{
-
-        type:'line',
-
-        data:{
-            labels:db.orders.map(o=>o.nama),
-            datasets:[{
-                data:db.orders.map(o=>o.total),
-                borderColor:'#2563eb',
-                backgroundColor:'rgba(37,99,235,.1)',
-                fill:true,
-                tension:.4
-            }]
-        },
-
-        options:{
-            plugins:{
-                legend:{
-                    display:false
-                }
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
-    });
-}
 
-function navTo(page){
+        /* LOGIN PAGE */
+        .login-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        }
 
-    document.querySelectorAll('.tab-content')
-        .forEach(x=>x.classList.remove('active'));
+        .login-card {
+            background: var(--bg-light);
+            border-radius: 16px;
+            padding: 32px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
 
-    document.getElementById('page-'+page)
-        .classList.add('active');
+        .login-card h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            color: var(--primary);
+        }
 
-    document.querySelectorAll('.nav-btn')
-        .forEach(x=>x.classList.remove('active'));
+        .login-card p {
+            color: var(--text-light-secondary);
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
 
-    const btn = document.getElementById('nav-'+page);
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
 
-    if(btn){
-        btn.classList.add('active');
-    }
-}
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
 
-function format(n){
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
 
-    return new Intl.NumberFormat('id-ID').format(n || 0);
-}
+        /* DASHBOARD PAGE */
+        .dashboard-header {
+            padding: 20px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border-radius: 0 0 20px 20px;
+        }
 
-window.addEventListener('beforeinstallprompt',(e)=>{
+        .datetime-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
 
-    e.preventDefault();
+        .time-display {
+            font-size: 32px;
+            font-weight: 700;
+        }
 
-    deferredPrompt = e;
+        .date-display {
+            font-size: 12px;
+            opacity: 0.9;
+            text-align: right;
+            line-height: 1.4;
+        }
 
-    document.getElementById('install-popup')
-        .classList.remove('hidden');
-});
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 16px;
+        }
 
-document.getElementById('btn-install')
-.addEventListener('click', async ()=>{
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
 
-    if(!deferredPrompt) return;
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+        }
 
-    deferredPrompt.prompt();
+        .stat-label {
+            font-size: 11px;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
 
-    await deferredPrompt.userChoice;
+        /* ITEMS LIST */
+        .items-container {
+            padding: 16px;
+        }
 
-    deferredPrompt = null;
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            overflow-x: auto;
+            padding: 0 4px;
+        }
 
-    document.getElementById('install-popup')
-        .classList.add('hidden');
-});
+        .filter-tab {
+            padding: 8px 14px;
+            background: var(--bg-light-secondary);
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            white-space: nowrap;
+            transition: all 0.3s;
+            color: var(--text-light-secondary);
+        }
 
-if('serviceWorker' in navigator){
+        .filter-tab.active {
+            background: var(--primary);
+            color: white;
+        }
 
-    window.addEventListener('load',()=>{
+        .item-card {
+            background: var(--bg-light-secondary);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-left: 4px solid var(--primary);
+            transition: all 0.3s;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
 
-        navigator.serviceWorker.register('./sw.js');
-    });
-}
+        .item-card:active {
+            transform: scale(0.98);
+        }
 
-if(currentUser){
+        .item-card.expired {
+            border-left-color: var(--danger);
+            background: rgba(239, 68, 68, 0.05);
+        }
 
-    document.getElementById('auth-page')
-        .classList.add('hidden');
+        .item-card.warning {
+            border-left-color: var(--warning);
+            background: rgba(245, 158, 11, 0.05);
+        }
 
-    loadOrders();
-}
+        .item-card.good {
+            border-left-color: var(--success);
+            background: rgba(16, 185, 129, 0.05);
+        }
 
-</script>
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
 
+        .item-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        .item-category {
+            display: inline-block;
+            font-size: 10px;
+            background: var(--primary);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            margin-top: 4px;
+        }
+
+        .item-age {
+            text-align: right;
+        }
+
+        .item-age-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .item-age-label {
+            font-size: 10px;
+            color: var(--text-light-secondary);
+        }
+
+        .item-progress {
+            height: 6px;
+            background: var(--bg-light);
+            border-radius: 3px;
+            margin: 8px 0;
+            overflow: hidden;
+        }
+
+        .item-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success) 0%, var(--warning) 70%, var(--danger) 100%);
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        .item-dates {
+            font-size: 11px;
+            color: var(--text-light-secondary);
+            margin-top: 8px;
+            line-height: 1.4;
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .action-btn.edit {
+            background: var(--primary);
+            color: white;
+        }
+
+        .action-btn.delete {
+            background: var(--danger);
+            color: white;
+        }
+
+        .action-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* MODAL */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            align-items: flex-end;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal {
+            background: var(--bg-light);
+            width: 100%;
+            max-width: 500px;
+            border-radius: 20px 20px 0 0;
+            padding: 24px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-light);
+            padding-bottom: 16px;
+        }
+
+        .modal-header h2 {
+            font-size: 18px;
+            color: var(--text-light);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-light-secondary);
+        }
+
+        /* FORM */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-light);
+            margin-bottom: 6px;
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            font-size: 14px;
+            background: var(--bg-light-secondary);
+            color: var(--text-light);
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .date-input-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .date-input-group input {
+            flex: 1;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-group input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .form-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 24px;
+        }
+
+        .submit-btn,
+        .cancel-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+        }
+
+        .cancel-btn {
+            background: var(--bg-light-secondary);
+            color: var(--text-light);
+            border: 1px solid var(--border-light);
+        }
+
+        /* PROFILE PAGE */
+        .profile-container {
+            padding: 20px;
+        }
+
+        .profile-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .profile-name {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .profile-email {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .profile-section {
+            background: var(--bg-light-secondary);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .profile-section h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-light);
+        }
+
+        .profile-stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-light);
+            font-size: 12px;
+        }
+
+        .profile-stat:last-child {
+            border-bottom: none;
+        }
+
+        .menu-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-light-secondary);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            font-size: 14px;
+            color: var(--text-light);
+            cursor: pointer;
+            margin-bottom: 12px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .menu-btn:active {
+            transform: scale(0.98);
+        }
+
+        .menu-btn.danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        /* BOTTOM NAVIGATION */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-light);
+            border-top: 1px solid var(--border-light);
+            padding: 8px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0;
+            z-index: 200;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: var(--text-light-secondary);
+            border: none;
+            background: none;
+            font-size: 12px;
+            position: relative;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+        }
+
+        .nav-icon {
+            font-size: 22px;
+            margin-bottom: 4px;
+        }
+
+        .nav-label {
+            font-size: 10px;
+            font-weight: 500;
+        }
+
+        .nav-item.center {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 50%;
+            color: white;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .nav-item.center:active {
+            transform: scale(0.95);
+        }
+
+        /* CALENDAR PAGE */
+        .calendar-container {
+            padding: 16px;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .calendar-month {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .calendar-nav {
+            display: flex;
+            gap: 8px;
+        }
+
+        .calendar-nav button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+
+        .calendar-day-header {
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-light-secondary);
+            padding: 8px 0;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: var(--bg-light-secondary);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .calendar-day:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .calendar-day.other-month {
+            opacity: 0.3;
+        }
+
+        .calendar-day.event::after {
+            content: '';
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--primary);
+            border-radius: 50%;
+            bottom: 2px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-light-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        .empty-state-text {
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .empty-state-hint {
+            font-size: 12px;
+        }
+
+        /* UTILITIES */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .mt-20 {
+            margin-top: 20px;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .modal {
+                max-height: 95vh;
+            }
+        }
+
+        /* Dark mode scrollbar */
+        .dark-mode ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .dark-mode ::-webkit-scrollbar-track {
+            background: var(--bg-dark-secondary);
+        }
+
+        .dark-mode ::-webkit-scrollbar-thumb {
+            background: var(--border-dark);
+            border-radius: 4px;
+        }
+
+        .dark-mode ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-light-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-light);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #cbd5e1;
+        }
+
+        .success-toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--success);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 12px;
+            animation: slideUp 0.3s ease-out;
+            z-index: 300;
+        }
+
+        .error-toast {
+            background: var(--danger);
+        }
+
+        .warning-toast {
+            background: var(--warning);
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- LOGIN PAGE -->
+        <div id="loginPage" class="page active">
+            <div class="login-container">
+                <div class="login-card">
+                    <h1>📦 Expiry Tracker</h1>
+                    <p>Pantau usia dan masa expired barang Anda</p>
+                    <button id="googleLoginBtn" class="login-btn">
+                        <span id="loginBtnText">Masuk dengan Google</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- DASHBOARD PAGE -->
+        <div id="dashboardPage" class="page">
+            <div class="header">
+                <div class="header-title">📦 Expiry Tracker</div>
+                <div class="header-actions">
+                    <button class="icon-btn" id="loadingIndicator" style="display: none;">
+                        <div class="loading-indicator"></div>
+                    </button>
+                    <button class="icon-btn" id="darkModeToggle">🌙</button>
+                </div>
+            </div>
+
+            <div class="dashboard-header">
+                <div class="datetime-display">
+                    <div>
+                        <div class="time-display" id="currentTime">00:00</div>
+                    </div>
+                    <div class="date-display">
+                        <div id="currentDay"></div>
+                        <div id="currentDate"></div>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalItems">0</div>
+                        <div class="stat-label">Total Barang</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="expiringItems">0</div>
+                        <div class="stat-label">Segera Expired</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="main">
+                <div class="items-container">
+                    <div class="filter-tabs" id="filterTabs">
+                        <button class="filter-tab active" data-filter="all">Semua</button>
+                        <button class="filter-tab" data-filter="expired">Expired</button>
+                        <button class="filter-tab" data-filter="warning">⚠️ Hati-hati</button>
+                        <button class="filter-tab" data-filter="good">✓ Aman</button>
+                    </div>
+                    <div id="itemsList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CALENDAR PAGE -->
+        <div id="calendarPage" class="page">
+            <div class="header">
+                <div class="header-title">📅 Kalender</div>
+                <button class="icon-btn" id="darkModeToggle2">🌙</button>
+            </div>
+
+            <div class="main">
+                <div class="calendar-container">
+                    <div class="calendar-header">
+                        <button class="icon-btn" id="prevMonth">←</button>
+                        <div class="calendar-month" id="calendarMonth"></div>
+                        <button class="icon-btn" id="nextMonth">→</button>
+                    </div>
+                    <div id="calendar"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PROFILE PAGE -->
+        <div id="profilePage" class="page">
+            <div class="header">
+                <div class="header-title">👤 Profil</div>
+                <button class="icon-btn" id="darkModeToggle3">🌙</button>
+            </div>
+
+            <div class="main">
+                <div class="profile-container">
+                    <div class="profile-header">
+                        <div class="profile-name" id="profileName">User</div>
+                        <div class="profile-email" id="profileEmail">user@example.com</div>
+                    </div>
+
+                    <div class="profile-section">
+                        <h3>📊 Statistik</h3>
+                        <div class="profile-stat">
+                            <span>Total Barang</span>
+                            <strong id="statTotalItems">0</strong>
+                        </div>
+                        <div class="profile-stat">
+                            <span>Expired</span>
+                            <strong id="statExpiredItems">0</strong>
+                        </div>
+                        <div class="profile-stat">
+                            <span>Peringatan</span>
+                            <strong id="statWarningItems">0</strong>
+                        </div>
+                        <div class="profile-stat">
+                            <span>Aman</span>
+                            <strong id="statGoodItems">0</strong>
+                        </div>
+                    </div>
+
+                    <div class="profile-section">
+                        <h3>⚙️ Pengaturan</h3>
+                        <button class="menu-btn" id="exportBtn">📥 Export Data</button>
+                        <button class="menu-btn" id="importBtn">📤 Import Data</button>
+                        <input type="file" id="importFile" accept=".json" style="display: none;">
+                    </div>
+
+                    <div class="profile-section">
+                        <button class="menu-btn danger" id="logoutBtn">🚪 Keluar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CREATE/EDIT MODAL -->
+        <div class="modal-overlay" id="modalOverlay">
+            <div class="modal" id="itemModal">
+                <div class="modal-header">
+                    <h2 id="modalTitle">Tambah Barang Baru</h2>
+                    <button class="close-btn" id="closeModalBtn">✕</button>
+                </div>
+
+                <form id="itemForm">
+                    <div class="form-group">
+                        <label class="form-label">Nama Barang *</label>
+                        <input type="text" class="form-input" id="itemName" placeholder="Contoh: Susu, Ban Motor" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Kategori *</label>
+                        <select class="form-select" id="itemCategory" required>
+                            <option value="">Pilih Kategori</option>
+                            <option value="Makanan">🍎 Makanan</option>
+                            <option value="Minuman">🥤 Minuman</option>
+                            <option value="Obat">💊 Obat</option>
+                            <option value="Perawatan">🧴 Perawatan</option>
+                            <option value="Kendaraan">🚗 Kendaraan</option>
+                            <option value="Rumah">🏠 Rumah</option>
+                            <option value="Elektronik">📱 Elektronik</option>
+                            <option value="Lainnya">📦 Lainnya</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Tanggal Mulai *</label>
+                        <input type="date" class="form-input" id="itemStartDate" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Estimasi Durasi (hari)</label>
+                        <input type="number" class="form-input" id="itemDuration" placeholder="Contoh: 30" min="1">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Tanggal Expired/Ganti</label>
+                        <input type="date" class="form-input" id="itemExpiredDate">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Catatan</label>
+                        <textarea class="form-textarea" id="itemNote" placeholder="Tambahkan catatan jika perlu..."></textarea>
+                    </div>
+
+                    <div class="form-buttons">
+                        <button type="button" class="cancel-btn" id="cancelBtn">Batal</button>
+                        <button type="submit" class="submit-btn">Simpan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <button class="nav-item" data-page="dashboard">
+            <div class="nav-icon">📊</div>
+            <div class="nav-label">Dashboard</div>
+        </button>
+        <button class="nav-item" data-page="dashboard">
+            <div class="nav-icon">🏠</div>
+            <div class="nav-label">Rumah</div>
+        </button>
+        <button class="nav-item center" id="addBtn">
+            <div class="nav-icon">+</div>
+        </button>
+        <button class="nav-item" data-page="calendar">
+            <div class="nav-icon">📅</div>
+            <div class="nav-label">Kalender</div>
+        </button>
+        <button class="nav-item" data-page="profile">
+            <div class="nav-icon">👤</div>
+            <div class="nav-label">Profil</div>
+        </button>
+    </div>
+
+    <script>
+        // ==================== CONFIG ====================
+        const CONFIG = {
+            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzzW9dyNlt6lMQQgOhbVTcoYndqvHcWOzGX7Fld9Lx4rAwzLwlEVO003j0kjvNtf3obTA/exec',
+            CACHE_TIME: 5 * 60 * 1000, // 5 menit
+        };
+
+        // ==================== GLOBAL STATE ====================
+        const state = {
+            user: null,
+            items: [],
+            filteredItems: [],
+            currentFilter: 'all',
+            isLoading: false,
+            isDarkMode: localStorage.getItem('darkMode') === 'true',
+            editingId: null,
+            currentPage: 'dashboard',
+        };
+
+        // ==================== INIT ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            setupDarkMode();
+            checkAuth();
+            setupEventListeners();
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+        });
+
+        // ==================== AUTHENTICATION ====================
+        function checkAuth() {
+            const token = localStorage.getItem('userToken');
+            const userData = localStorage.getItem('userData');
+
+            if (token && userData) {
+                state.user = JSON.parse(userData);
+                showPage('dashboard');
+                loadItems();
+            } else {
+                showPage('login');
+            }
+        }
+
+        document.getElementById('googleLoginBtn').addEventListener('click', () => {
+            const btn = document.getElementById('googleLoginBtn');
+            btn.disabled = true;
+            document.getElementById('loginBtnText').textContent = 'Memproses...';
+
+            // Simulasi login Google (ganti dengan implementasi nyata)
+            simulateGoogleLogin();
+        });
+
+        function simulateGoogleLogin() {
+            // Dalam implementasi nyata, gunakan Google Sign-In SDK
+            const mockUser = {
+                id: 'user_' + Date.now(),
+                name: 'John Doe',
+                email: 'john@example.com',
+            };
+
+            state.user = mockUser;
+            localStorage.setItem('userToken', 'token_' + Date.now());
+            localStorage.setItem('userData', JSON.stringify(mockUser));
+
+            updateProfileInfo();
+            showPage('dashboard');
+            loadItems();
+        }
+
+        // ==================== PAGE NAVIGATION ====================
+        function showPage(pageName) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageName + 'Page').classList.add('active');
+
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            document.querySelectorAll(`[data-page="${pageName}"]`).forEach(item => {
+                item.classList.add('active');
+            });
+
+            state.currentPage = pageName;
+
+            if (pageName === 'calendar') {
+                renderCalendar();
+            }
+        }
+
+        document.querySelectorAll('[data-page]').forEach(item => {
+            item.addEventListener('click', (e) => {
+                if (!e.target.closest('#addBtn')) {
+                    showPage(item.dataset.page);
+                }
+            });
+        });
+
+        // ==================== DARK MODE ====================
+        function setupDarkMode() {
+            if (state.isDarkMode) {
+                document.body.classList.add('dark-mode');
+                updateDarkModeIcons();
+            }
+        }
+
+        function toggleDarkMode() {
+            state.isDarkMode = !state.isDarkMode;
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', state.isDarkMode);
+            updateDarkModeIcons();
+        }
+
+        function updateDarkModeIcons() {
+            const icon = state.isDarkMode ? '☀️' : '🌙';
+            document.getElementById('darkModeToggle').textContent = icon;
+            document.getElementById('darkModeToggle2').textContent = icon;
+            document.getElementById('darkModeToggle3').textContent = icon;
+        }
+
+        document.getElementById('darkModeToggle').addEventListener('click', toggleDarkMode);
+        document.getElementById('darkModeToggle2').addEventListener('click', toggleDarkMode);
+        document.getElementById('darkModeToggle3').addEventListener('click', toggleDarkMode);
+
+        // ==================== DATETIME ====================
+        function updateDateTime() {
+            const now = new Date();
+
+            // Time
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('currentTime').textContent = `${hours}:${minutes}`;
+
+            // Day
+            const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+            document.getElementById('currentDay').textContent = days[now.getDay()];
+
+            // Date
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            const dateStr = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+            document.getElementById('currentDate').textContent = dateStr;
+        }
+
+        // ==================== ITEMS MANAGEMENT ====================
+        async function loadItems() {
+            try {
+                setLoading(true);
+                const response = await fetch(CONFIG.SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'getItems',
+                        userId: state.user.id,
+                    }),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    state.items = data.items || [];
+                } else {
+                    // Gunakan data dari localStorage jika offline
+                    state.items = JSON.parse(localStorage.getItem(`items_${state.user.id}`) || '[]');
+                }
+
+                renderItems();
+                updateStats();
+            } catch (error) {
+                console.error('Error loading items:', error);
+                state.items = JSON.parse(localStorage.getItem(`items_${state.user.id}`) || '[]');
+                renderItems();
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function saveItem(item) {
+            try {
+                setLoading(true);
+
+                const payload = {
+                    action: state.editingId ? 'updateItem' : 'addItem',
+                    userId: state.user.id,
+                    item: {
+                        ...item,
+                        id: state.editingId || 'item_' + Date.now(),
+                    },
+                };
+
+                const response = await fetch(CONFIG.SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                });
+
+                if (response.ok) {
+                    if (state.editingId) {
+                        const index = state.items.findIndex(i => i.id === state.editingId);
+                        if (index !== -1) {
+                            state.items[index] = payload.item;
+                        }
+                    } else {
+                        state.items.push(payload.item);
+                    }
+                    showToast('Data berhasil disimpan', 'success');
+                }
+
+                localStorage.setItem(`items_${state.user.id}`, JSON.stringify(state.items));
+                closeModal();
+                renderItems();
+                updateStats();
+            } catch (error) {
+                console.error('Error saving item:', error);
+                showToast('Gagal menyimpan data', 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function deleteItem(id) {
+            if (!confirm('Yakin ingin menghapus barang ini?')) return;
+
+            try {
+                setLoading(true);
+
+                const response = await fetch(CONFIG.SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'deleteItem',
+                        userId: state.user.id,
+                        itemId: id,
+                    }),
+                });
+
+                if (response.ok) {
+                    state.items = state.items.filter(i => i.id !== id);
+                    localStorage.setItem(`items_${state.user.id}`, JSON.stringify(state.items));
+                    showToast('Barang berhasil dihapus', 'success');
+                    renderItems();
+                    updateStats();
+                }
+            } catch (error) {
+                console.error('Error deleting item:', error);
+                showToast('Gagal menghapus barang', 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // ==================== RENDERING ====================
+        function renderItems() {
+            const container = document.getElementById('itemsList');
+            let filtered = state.items;
+
+            if (state.currentFilter !== 'all') {
+                filtered = state.items.filter(item => {
+                    const status = getItemStatus(item);
+                    return status === state.currentFilter;
+                });
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📦</div>
+                        <div class="empty-state-text">Belum ada barang</div>
+                        <div class="empty-state-hint">Tambahkan barang pertama Anda dengan tombol +</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(item => {
+                const status = getItemStatus(item);
+                const progress = calculateProgress(item);
+                const age = calculateAge(item.startDate);
+
+                return `
+                    <div class="item-card ${status}">
+                        <div class="item-header">
+                            <div>
+                                <div class="item-name">${escapeHtml(item.name)}</div>
+                                <span class="item-category">${item.category}</span>
+                            </div>
+                            <div class="item-age">
+                                <div class="item-age-value">${age.days}</div>
+                                <div class="item-age-label">${age.label}</div>
+                            </div>
+                        </div>
+                        <div class="item-progress">
+                            <div class="item-progress-bar" style="width: ${Math.min(progress, 100)}%"></div>
+                        </div>
+                        <div class="item-dates">
+                            📅 Mulai: ${formatDate(item.startDate)}<br>
+                            ${item.expiredDate ? `⏰ Expired: ${formatDate(item.expiredDate)}` : ''}
+                        </div>
+                        ${item.note ? `<div class="item-dates">📝 ${escapeHtml(item.note)}</div>` : ''}
+                        <div class="item-actions">
+                            <button class="action-btn edit" onclick="editItem('${item.id}')">✏️ Edit</button>
+                            <button class="action-btn delete" onclick="deleteItem('${item.id}')">🗑️ Hapus</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getItemStatus(item) {
+            if (!item.expiredDate) return 'good';
+
+            const now = new Date();
+            const expired = new Date(item.expiredDate);
+            const daysUntilExpire = Math.ceil((expired - now) / (1000 * 60 * 60 * 24));
+
+            if (daysUntilExpire < 0) return 'expired';
+            if (daysUntilExpire <= 7) return 'warning';
+            return 'good';
+        }
+
+        function calculateAge(startDate) {
+            const start = new Date(startDate);
+            const now = new Date();
+            const days = Math.floor((now - start) / (1000 * 60 * 60 * 24));
+
+            if (days === 0) return { days: '0', label: 'hari' };
+            if (days < 30) return { days, label: 'hari' };
+            if (days < 365) {
+                const months = Math.floor(days / 30);
+                return { days: months, label: 'bulan' };
+            }
+
+            const years = Math.floor(days / 365);
+            return { days: years, label: 'tahun' };
+        }
+
+        function calculateProgress(item) {
+            if (!item.expiredDate || !item.startDate) return 0;
+
+            const start = new Date(item.startDate);
+            const expired = new Date(item.expiredDate);
+            const now = new Date();
+
+            const total = expired - start;
+            const elapsed = now - start;
+
+            return (elapsed / total) * 100;
+        }
+
+        function updateStats() {
+            const total = state.items.length;
+            const expired = state.items.filter(i => getItemStatus(i) === 'expired').length;
+            const warning = state.items.filter(i => getItemStatus(i) === 'warning').length;
+            const good = state.items.filter(i => getItemStatus(i) === 'good').length;
+
+            document.getElementById('totalItems').textContent = total;
+            document.getElementById('expiringItems').textContent = expired + warning;
+
+            document.getElementById('statTotalItems').textContent = total;
+            document.getElementById('statExpiredItems').textContent = expired;
+            document.getElementById('statWarningItems').textContent = warning;
+            document.getElementById('statGoodItems').textContent = good;
+        }
+
+        function updateProfileInfo() {
+            document.getElementById('profileName').textContent = state.user.name;
+            document.getElementById('profileEmail').textContent = state.user.email;
+        }
+
+        // ==================== MODAL ====================
+        function openModal() {
+            document.getElementById('modalOverlay').classList.add('active');
+            state.editingId = null;
+            document.getElementById('modalTitle').textContent = 'Tambah Barang Baru';
+            document.getElementById('itemForm').reset();
+            document.getElementById('itemStartDate').valueAsDate = new Date();
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+            state.editingId = null;
+            document.getElementById('itemForm').reset();
+        }
+
+        function editItem(id) {
+            const item = state.items.find(i => i.id === id);
+            if (!item) return;
+
+            state.editingId = id;
+            document.getElementById('modalTitle').textContent = 'Edit Barang';
+            document.getElementById('itemName').value = item.name;
+            document.getElementById('itemCategory').value = item.category;
+            document.getElementById('itemStartDate').value = item.startDate;
+            document.getElementById('itemDuration').value = item.duration || '';
+            document.getElementById('itemExpiredDate').value = item.expiredDate || '';
+            document.getElementById('itemNote').value = item.note || '';
+
+            document.getElementById('modalOverlay').classList.add('active');
+        }
+
+        document.getElementById('itemForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const item = {
+                id: state.editingId || 'item_' + Date.now(),
+                name: document.getElementById('itemName').value,
+                category: document.getElementById('itemCategory').value,
+                startDate: document.getElementById('itemStartDate').value,
+                duration: document.getElementById('itemDuration').value || null,
+                expiredDate: document.getElementById('itemExpiredDate').value || null,
+                note: document.getElementById('itemNote').value,
+                createdAt: new Date().toISOString(),
+            };
+
+            saveItem(item);
+        });
+
+        // ==================== CALENDAR ====================
+        function renderCalendar() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+
+            const monthName = new Date(year, month).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+            document.getElementById('calendarMonth').textContent = monthName;
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startDate = new Date(firstDay);
+            startDate.setDate(startDate.getDate() - firstDay.getDay());
+
+            let html = '<div class="calendar-grid">';
+
+            const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+            dayNames.forEach(day => {
+                html += `<div class="calendar-day-header">${day}</div>`;
+            });
+
+            let currentDate = new Date(startDate);
+            while (currentDate < new Date(year, month + 1, 1) || currentDate.getDay() !== 0) {
+                const isCurrentMonth = currentDate.getMonth() === month;
+                const hasEvent = state.items.some(item => {
+                    const expDate = new Date(item.expiredDate || item.startDate);
+                    return expDate.toDateString() === currentDate.toDateString();
+                });
+
+                html += `
+                    <div class="calendar-day ${!isCurrentMonth ? 'other-month' : ''} ${hasEvent ? 'event' : ''}">
+                        ${currentDate.getDate()}
+                    </div>
+                `;
+
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            html += '</div>';
+            document.getElementById('calendar').innerHTML = html;
+        }
+
+        // ==================== FILTER ====================
+        document.querySelectorAll('.filter-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                state.currentFilter = tab.dataset.filter;
+                renderItems();
+            });
+        });
+
+        // ==================== EXPORT/IMPORT ====================
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            const data = {
+                user: state.user,
+                items: state.items,
+                exportedAt: new Date().toISOString(),
+            };
+
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `expiry-tracker-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showToast('Data berhasil diexport', 'success');
+        });
+
+        document.getElementById('importBtn').addEventListener('click', () => {
+            document.getElementById('importFile').click();
+        });
+
+        document.getElementById('importFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const data = JSON.parse(event.target.result);
+                    if (data.items && Array.isArray(data.items)) {
+                        state.items = data.items;
+                        localStorage.setItem(`items_${state.user.id}`, JSON.stringify(state.items));
+                        renderItems();
+                        updateStats();
+                        showToast('Data berhasil diimport', 'success');
+                    }
+                } catch (error) {
+                    showToast('File tidak valid', 'error');
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // ==================== LOGOUT ====================
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            if (confirm('Yakin ingin keluar?')) {
+                localStorage.removeItem('userToken');
+                localStorage.removeItem('userData');
+                state.user = null;
+                state.items = [];
+                showPage('login');
+                document.getElementById('googleLoginBtn').disabled = false;
+                document.getElementById('loginBtnText').textContent = 'Masuk dengan Google';
+            }
+        });
+
+        // ==================== EVENT LISTENERS ====================
+        function setupEventListeners() {
+            document.getElementById('addBtn').addEventListener('click', openModal);
+            document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+            document.getElementById('cancelBtn').addEventListener('click', closeModal);
+
+            document.getElementById('modalOverlay').addEventListener('click', (e) => {
+                if (e.target === document.getElementById('modalOverlay')) {
+                    closeModal();
+                }
+            });
+
+            document.getElementById('prevMonth').addEventListener('click', () => {
+                const now = new Date();
+                now.setMonth(now.getMonth() - 1);
+                renderCalendar();
+            });
+
+            document.getElementById('nextMonth').addEventListener('click', () => {
+                const now = new Date();
+                now.setMonth(now.getMonth() + 1);
+                renderCalendar();
+            });
+        }
+
+        // ==================== UTILITIES ====================
+        function setLoading(isLoading) {
+            state.isLoading = isLoading;
+            const indicator = document.getElementById('loadingIndicator');
+            if (isLoading) {
+                indicator.style.display = 'flex';
+            } else {
+                indicator.style.display = 'none';
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `${type}-toast`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
 </body>
 </html>

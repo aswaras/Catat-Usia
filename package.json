@@ -1,0 +1,36 @@
+{
+  "name": "expiry-tracker",
+  "version": "1.0.0",
+  "description": "Smart mobile web app untuk tracking expiry dates barang dan makanan",
+  "type": "module",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python -m http.server 3000",
+    "start": "python -m http.server 8000",
+    "deploy": "vercel"
+  },
+  "keywords": [
+    "expiry-tracker",
+    "expired-dates",
+    "mobile-app",
+    "google-sheets",
+    "google-apps-script",
+    "pwa",
+    "progressive-web-app"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/expiry-tracker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/expiry-tracker/issues"
+  },
+  "homepage": "https://github.com/yourusername/expiry-tracker#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+}
