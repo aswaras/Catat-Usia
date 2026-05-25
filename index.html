@@ -1,1837 +1,772 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expiry Tracker - Track Your Item's Age</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MasaPakai - Tracker Barang & Maintenance</title>
+    <!-- Tailwind CSS for Modern Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 900: '#1e3a8a' } }
+                }
+            }
+        }
+    </script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --secondary: #ec4899;
-            --warning: #f59e0b;
-            --success: #10b981;
-            --danger: #ef4444;
-            --bg-light: #ffffff;
-            --bg-light-secondary: #f9fafb;
-            --text-light: #1f2937;
-            --text-light-secondary: #6b7280;
-            --border-light: #e5e7eb;
-            --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            
-            --bg-dark: #0f172a;
-            --bg-dark-secondary: #1e293b;
-            --text-dark: #f1f5f9;
-            --text-dark-secondary: #cbd5e1;
-            --border-dark: #334155;
-            --shadow-dark: 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
-
-        body.dark-mode {
-            --primary: #818cf8;
-            --bg-light: var(--bg-dark);
-            --bg-light-secondary: var(--bg-dark-secondary);
-            --text-light: var(--text-dark);
-            --text-light-secondary: var(--text-dark-secondary);
-            --border-light: var(--border-dark);
-            --shadow: var(--shadow-dark);
-        }
-
-        html, body {
-            height: 100%;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-            background-color: var(--bg-light);
-            color: var(--text-light);
-            transition: background-color 0.3s, color 0.3s;
-        }
-
-        #app {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* HEADER */
-        .header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            padding: 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: var(--shadow);
-            z-index: 100;
-        }
-
-        .header-title {
-            font-size: 14px;
-            font-weight: 600;
-            opacity: 0.9;
-        }
-
-        .header-user {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 12px;
-        }
-
-        .icon-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
-            font-size: 18px;
-        }
-
-        .icon-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: scale(1.05);
-        }
-
-        .loading-indicator {
-            width: 20px;
-            height: 20px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-top-color: white;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* MAIN CONTENT */
-        .main {
-            flex: 1;
-            overflow-y: auto;
-            padding-bottom: 80px;
-        }
-
-        /* PAGES */
-        .page {
-            display: none;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        .page.active {
-            display: block;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* LOGIN PAGE */
-        .login-container {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            padding: 20px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-        }
-
-        .login-card {
-            background: var(--bg-light);
-            border-radius: 16px;
-            padding: 32px;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: var(--shadow);
-            text-align: center;
-        }
-
-        .login-card h1 {
-            font-size: 24px;
-            margin-bottom: 8px;
-            color: var(--primary);
-        }
-
-        .login-card p {
-            color: var(--text-light-secondary);
-            margin-bottom: 24px;
-            font-size: 14px;
-        }
-
-        .login-card a {
-            cursor: pointer;
-        }
-
-        .login-btn {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .login-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow);
-        }
-
-        .login-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        /* DASHBOARD PAGE */
-        .dashboard-header {
-            padding: 20px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            border-radius: 0 0 20px 20px;
-        }
-
-        .datetime-display {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-
-        .time-display {
-            font-size: 32px;
-            font-weight: 700;
-        }
-
-        .date-display {
-            font-size: 12px;
-            opacity: 0.9;
-            text-align: right;
-            line-height: 1.4;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-top: 16px;
-        }
-
-        .stat-card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            padding: 12px;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .stat-value {
-            font-size: 20px;
-            font-weight: 700;
-        }
-
-        .stat-label {
-            font-size: 11px;
-            opacity: 0.8;
-            margin-top: 4px;
-        }
-
-        /* ITEMS LIST */
-        .items-container {
-            padding: 16px;
-        }
-
-        .filter-tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
-            overflow-x: auto;
-            padding: 0 4px;
-        }
-
-        .filter-tab {
-            padding: 8px 14px;
-            background: var(--bg-light-secondary);
-            border: none;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 12px;
-            white-space: nowrap;
-            transition: all 0.3s;
-            color: var(--text-light-secondary);
-        }
-
-        .filter-tab.active {
-            background: var(--primary);
-            color: white;
-        }
-
-        .item-card {
-            background: var(--bg-light-secondary);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 12px;
-            border-left: 4px solid var(--primary);
-            transition: all 0.3s;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-        }
-
-        .item-card:active {
-            transform: scale(0.98);
-        }
-
-        .item-card.expired {
-            border-left-color: var(--danger);
-            background: rgba(239, 68, 68, 0.05);
-        }
-
-        .item-card.warning {
-            border-left-color: var(--warning);
-            background: rgba(245, 158, 11, 0.05);
-        }
-
-        .item-card.good {
-            border-left-color: var(--success);
-            background: rgba(16, 185, 129, 0.05);
-        }
-
-        .item-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 12px;
-        }
-
-        .item-name {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-light);
-        }
-
-        .item-category {
-            display: inline-block;
-            font-size: 10px;
-            background: var(--primary);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 12px;
-            margin-top: 4px;
-        }
-
-        .item-age {
-            text-align: right;
-        }
-
-        .item-age-value {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .item-age-label {
-            font-size: 10px;
-            color: var(--text-light-secondary);
-        }
-
-        .item-progress {
-            height: 6px;
-            background: var(--bg-light);
-            border-radius: 3px;
-            margin: 8px 0;
-            overflow: hidden;
-        }
-
-        .item-progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, var(--success) 0%, var(--warning) 70%, var(--danger) 100%);
-            border-radius: 3px;
-            transition: width 0.3s;
-        }
-
-        .item-dates {
-            font-size: 11px;
-            color: var(--text-light-secondary);
-            margin-top: 8px;
-            line-height: 1.4;
-        }
-
-        .item-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
-        }
-
-        .action-btn {
-            flex: 1;
-            padding: 8px;
-            border: none;
-            border-radius: 8px;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 500;
-        }
-
-        .action-btn.edit {
-            background: var(--primary);
-            color: white;
-        }
-
-        .action-btn.delete {
-            background: var(--danger);
-            color: white;
-        }
-
-        .action-btn:active {
-            transform: scale(0.95);
-        }
-
-        /* MODAL */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            animation: fadeIn 0.3s ease-out;
-        }
-
-        .modal-overlay.active {
-            display: flex;
-            align-items: flex-end;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        .modal {
-            background: var(--bg-light);
-            width: 100%;
-            max-width: 500px;
-            border-radius: 20px 20px 0 0;
-            padding: 24px;
-            max-height: 90vh;
-            overflow-y: auto;
-            animation: slideUp 0.3s ease-out;
-        }
-
-        @keyframes slideUp {
-            from {
-                transform: translateY(100%);
-            }
-            to {
-                transform: translateY(0);
-            }
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            border-bottom: 1px solid var(--border-light);
-            padding-bottom: 16px;
-        }
-
-        .modal-header h2 {
-            font-size: 18px;
-            color: var(--text-light);
-        }
-
-        .close-btn {
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: var(--text-light-secondary);
-        }
-
-        /* FORM */
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        .login-card .form-group {
-            margin-bottom: 12px;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-light);
-            margin-bottom: 6px;
-        }
-
-        .login-card .form-label {
-            font-size: 11px;
-            margin-bottom: 4px;
-        }
-
-        .form-input,
-        .form-select,
-        .form-textarea {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border-light);
-            border-radius: 8px;
-            font-size: 14px;
-            background: var(--bg-light-secondary);
-            color: var(--text-light);
-            font-family: inherit;
-            transition: all 0.3s;
-        }
-
-        .login-card .form-input {
-            padding: 8px;
-            font-size: 13px;
-            background: white;
-        }
-
-        .form-input:focus,
-        .form-select:focus,
-        .form-textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-        }
-
-        .form-textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-
-        .date-input-group {
-            display: flex;
-            gap: 8px;
-        }
-
-        .date-input-group input {
-            flex: 1;
-        }
-
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .checkbox-group input {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
-
-        .form-buttons {
-            display: flex;
-            gap: 8px;
-            margin-top: 24px;
-        }
-
-        .submit-btn,
-        .cancel-btn {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .submit-btn {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-        }
-
-        .cancel-btn {
-            background: var(--bg-light-secondary);
-            color: var(--text-light);
-            border: 1px solid var(--border-light);
-        }
-
-        /* PROFILE PAGE */
-        .profile-container {
-            padding: 20px;
-        }
-
-        .profile-header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            border-radius: 16px;
-            padding: 24px;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .profile-name {
-            font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        .profile-email {
-            font-size: 12px;
-            opacity: 0.9;
-        }
-
-        .profile-section {
-            background: var(--bg-light-secondary);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 12px;
-        }
-
-        .profile-section h3 {
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 12px;
-            color: var(--text-light);
-        }
-
-        .profile-stat {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid var(--border-light);
-            font-size: 12px;
-        }
-
-        .profile-stat:last-child {
-            border-bottom: none;
-        }
-
-        .menu-btn {
-            width: 100%;
-            padding: 12px;
-            background: var(--bg-light-secondary);
-            border: 1px solid var(--border-light);
-            border-radius: 8px;
-            font-size: 14px;
-            color: var(--text-light);
-            cursor: pointer;
-            margin-bottom: 12px;
-            transition: all 0.3s;
-            font-weight: 500;
-        }
-
-        .menu-btn:active {
-            transform: scale(0.98);
-        }
-
-        .menu-btn.danger {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--danger);
-        }
-
-        /* BOTTOM NAVIGATION */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: var(--bg-light);
-            border-top: 1px solid var(--border-light);
-            padding: 8px 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 0;
-            z-index: 200;
-            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .nav-item {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 12px;
-            cursor: pointer;
-            transition: all 0.3s;
-            color: var(--text-light-secondary);
-            border: none;
-            background: none;
-            font-size: 12px;
-            position: relative;
-        }
-
-        .nav-item.active {
-            color: var(--primary);
-        }
-
-        .nav-icon {
-            font-size: 22px;
-            margin-bottom: 4px;
-        }
-
-        .nav-label {
-            font-size: 10px;
-            font-weight: 500;
-        }
-
-        .nav-item.center {
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            border-radius: 50%;
-            color: white;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-        }
-
-        .nav-item.center:active {
-            transform: scale(0.95);
-        }
-
-        /* CALENDAR PAGE */
-        .calendar-container {
-            padding: 16px;
-        }
-
-        .calendar-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .calendar-month {
-            font-size: 18px;
-            font-weight: 700;
-        }
-
-        .calendar-nav {
-            display: flex;
-            gap: 8px;
-        }
-
-        .calendar-nav button {
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            width: 30px;
-            height: 30px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 8px;
-        }
-
-        .calendar-day-header {
-            text-align: center;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-light-secondary);
-            padding: 8px 0;
-        }
-
-        .calendar-day {
-            aspect-ratio: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-            background: var(--bg-light-secondary);
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.3s;
-            position: relative;
-        }
-
-        .calendar-day:hover {
-            background: var(--primary);
-            color: white;
-        }
-
-        .calendar-day.other-month {
-            opacity: 0.3;
-        }
-
-        .calendar-day.event::after {
-            content: '';
-            position: absolute;
-            width: 4px;
-            height: 4px;
-            background: var(--primary);
-            border-radius: 50%;
-            bottom: 2px;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--text-light-secondary);
-        }
-
-        .empty-state-icon {
-            font-size: 48px;
-            margin-bottom: 12px;
-            opacity: 0.5;
-        }
-
-        .empty-state-text {
-            font-size: 14px;
-            margin-bottom: 8px;
-        }
-
-        .empty-state-hint {
-            font-size: 12px;
-        }
-
-        /* UTILITIES */
-        .hidden {
-            display: none !important;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
-        .mt-20 {
-            margin-top: 20px;
-        }
-
-        /* RESPONSIVE */
-        @media (max-width: 480px) {
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .modal {
-                max-height: 95vh;
-            }
-        }
-
-        /* Dark mode scrollbar */
-        .dark-mode ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .dark-mode ::-webkit-scrollbar-track {
-            background: var(--bg-dark-secondary);
-        }
-
-        .dark-mode ::-webkit-scrollbar-thumb {
-            background: var(--border-dark);
-            border-radius: 4px;
-        }
-
-        .dark-mode ::-webkit-scrollbar-thumb:hover {
-            background: #64748b;
-        }
-
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--bg-light-secondary);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--border-light);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #cbd5e1;
-        }
-
-        .success-toast {
-            position: fixed;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--success);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 12px;
-            animation: slideUp 0.3s ease-out;
-            z-index: 300;
-        }
-
-        .error-toast {
-            background: var(--danger);
-        }
-
-        .warning-toast {
-            background: var(--warning);
-        }
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .view-section { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+        .calendar-day { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; font-size: 0.875rem; position: relative; cursor: pointer; }
+        .calendar-day.active { background-color: #3b82f6; color: white; font-weight: bold; }
+        .dark .calendar-day.active { background-color: #2563eb; }
+        .calendar-dot { width: 6px; height: 6px; border-radius: 50%; position: absolute; bottom: 4px; }
+
+        /* Loader Icon Animation */
+        .spin-slow { animation: spin 2s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     </style>
 </head>
-<body>
-    <div id="app">
-        <!-- LOGIN PAGE -->
-        <div id="loginPage" class="page active">
-            <div class="login-container">
-                <div class="login-card">
-                    <h1>📦 Expiry Tracker</h1>
-                    <p>Pantau usia dan masa expired barang Anda</p>
-                    
-                    <div id="loginForm" style="display: block;">
-                        <div class="form-group">
-                            <label class="form-label">Email</label>
-                            <input type="email" class="form-input" id="loginEmail" placeholder="Masukkan email Anda" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Password</label>
-                            <input type="password" class="form-input" id="loginPassword" placeholder="Masukkan password" required>
-                        </div>
-                        <button id="loginBtn" class="login-btn">Masuk</button>
-                        <p style="margin-top: 16px; font-size: 12px;">
-                            Belum punya akun? 
-                            <a href="#" id="showRegisterLink" style="color: var(--primary); text-decoration: none; font-weight: 600;">Daftar di sini</a>
-                        </p>
-                    </div>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 transition-colors duration-300">
 
-                    <div id="registerForm" style="display: none;">
-                        <div class="form-group">
-                            <label class="form-label">Nama Lengkap</label>
-                            <input type="text" class="form-input" id="registerName" placeholder="Masukkan nama Anda" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Email</label>
-                            <input type="email" class="form-input" id="registerEmail" placeholder="Masukkan email Anda" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Password</label>
-                            <input type="password" class="form-input" id="registerPassword" placeholder="Minimal 6 karakter" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Konfirmasi Password</label>
-                            <input type="password" class="form-input" id="registerPasswordConfirm" placeholder="Ulangi password" required>
-                        </div>
-                        <button id="registerBtn" class="login-btn">Daftar</button>
-                        <p style="margin-top: 16px; font-size: 12px;">
-                            Sudah punya akun? 
-                            <a href="#" id="showLoginLink" style="color: var(--primary); text-decoration: none; font-weight: 600;">Masuk di sini</a>
-                        </p>
-                    </div>
-                </div>
+    <!-- ================= VIEW: AUTHENTICATION (LOGIN/REGISTER) ================= -->
+    <div id="auth-container" class="min-h-screen flex flex-col justify-center px-6 py-12 relative z-50 bg-slate-50 dark:bg-slate-900">
+        <div class="sm:mx-auto sm:w-full sm:max-w-sm text-center mb-8">
+            <div class="w-16 h-16 bg-brand-500 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-lg shadow-brand-500/30">
+                <i data-lucide="box" class="w-8 h-8 text-white"></i>
             </div>
+            <h2 class="text-2xl font-bold leading-9 tracking-tight text-slate-900 dark:text-white">MasaPakai</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Tracker Masa Pakai Barang & Rutinitas</p>
         </div>
 
-        <!-- DASHBOARD PAGE -->
-        <div id="dashboardPage" class="page">
-            <div class="header">
-                <div class="header-title">📦 Expiry Tracker</div>
-                <div class="header-actions">
-                    <button class="icon-btn" id="loadingIndicator" style="display: none;">
-                        <div class="loading-indicator"></div>
-                    </button>
-                    <button class="icon-btn" id="darkModeToggle">🌙</button>
+        <div class="sm:mx-auto sm:w-full sm:max-w-sm bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-700 relative overflow-hidden">
+            <!-- Loading overlay for Auth -->
+            <div id="auth-loading" class="hidden absolute inset-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center">
+                <i data-lucide="loader-2" class="w-8 h-8 text-brand-500 animate-spin mb-2"></i>
+                <span class="text-sm font-medium text-slate-600 dark:text-slate-300">Memproses...</span>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <form id="form-login" class="space-y-4" onsubmit="app.handleAuth(event, 'login')">
+                <h3 class="font-bold text-lg text-center mb-6 dark:text-white">Masuk ke Akun</h3>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Username</label>
+                    <input id="login-user" type="text" required class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-brand-500">
                 </div>
-            </div>
-
-            <div class="dashboard-header">
-                <div class="datetime-display">
-                    <div>
-                        <div class="time-display" id="currentTime">00:00</div>
-                    </div>
-                    <div class="date-display">
-                        <div id="currentDay"></div>
-                        <div id="currentDate"></div>
-                    </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
+                    <input id="login-pass" type="password" required class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-brand-500">
                 </div>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="totalItems">0</div>
-                        <div class="stat-label">Total Barang</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="expiringItems">0</div>
-                        <div class="stat-label">Segera Expired</div>
-                    </div>
+                <button type="submit" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-medium shadow-md shadow-brand-500/20 transition mt-2">Masuk</button>
+                <p class="text-center text-sm text-slate-500 mt-4">Belum punya akun? <button type="button" onclick="app.toggleAuthForm('register')" class="text-brand-600 font-bold hover:underline">Daftar disini</button></p>
+            </form>
+
+            <!-- REGISTER FORM (Hidden by default) -->
+            <form id="form-register" class="space-y-4 hidden" onsubmit="app.handleAuth(event, 'register')">
+                <h3 class="font-bold text-lg text-center mb-6 dark:text-white">Buat Akun Baru</h3>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Username Baru</label>
+                    <input id="reg-user" type="text" required class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-brand-500">
                 </div>
-            </div>
-
-            <div class="main">
-                <div class="items-container">
-                    <div class="filter-tabs" id="filterTabs">
-                        <button class="filter-tab active" data-filter="all">Semua</button>
-                        <button class="filter-tab" data-filter="expired">Expired</button>
-                        <button class="filter-tab" data-filter="warning">⚠️ Hati-hati</button>
-                        <button class="filter-tab" data-filter="good">✓ Aman</button>
-                    </div>
-                    <div id="itemsList"></div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
+                    <input id="reg-pass" type="password" required class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-brand-500">
                 </div>
-            </div>
-        </div>
-
-        <!-- CALENDAR PAGE -->
-        <div id="calendarPage" class="page">
-            <div class="header">
-                <div class="header-title">📅 Kalender</div>
-                <button class="icon-btn" id="darkModeToggle2">🌙</button>
-            </div>
-
-            <div class="main">
-                <div class="calendar-container">
-                    <div class="calendar-header">
-                        <button class="icon-btn" id="prevMonth">←</button>
-                        <div class="calendar-month" id="calendarMonth"></div>
-                        <button class="icon-btn" id="nextMonth">→</button>
-                    </div>
-                    <div id="calendar"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- PROFILE PAGE -->
-        <div id="profilePage" class="page">
-            <div class="header">
-                <div class="header-title">👤 Profil</div>
-                <button class="icon-btn" id="darkModeToggle3">🌙</button>
-            </div>
-
-            <div class="main">
-                <div class="profile-container">
-                    <div class="profile-header">
-                        <div class="profile-name" id="profileName">User</div>
-                        <div class="profile-email" id="profileEmail">user@example.com</div>
-                    </div>
-
-                    <div class="profile-section">
-                        <h3>📊 Statistik</h3>
-                        <div class="profile-stat">
-                            <span>Total Barang</span>
-                            <strong id="statTotalItems">0</strong>
-                        </div>
-                        <div class="profile-stat">
-                            <span>Expired</span>
-                            <strong id="statExpiredItems">0</strong>
-                        </div>
-                        <div class="profile-stat">
-                            <span>Peringatan</span>
-                            <strong id="statWarningItems">0</strong>
-                        </div>
-                        <div class="profile-stat">
-                            <span>Aman</span>
-                            <strong id="statGoodItems">0</strong>
-                        </div>
-                    </div>
-
-                    <div class="profile-section">
-                        <h3>⚙️ Pengaturan</h3>
-                        <button class="menu-btn" id="exportBtn">📥 Export Data</button>
-                        <button class="menu-btn" id="importBtn">📤 Import Data</button>
-                        <input type="file" id="importFile" accept=".json" style="display: none;">
-                    </div>
-
-                    <div class="profile-section">
-                        <button class="menu-btn danger" id="logoutBtn">🚪 Keluar</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- CREATE/EDIT MODAL -->
-        <div class="modal-overlay" id="modalOverlay">
-            <div class="modal" id="itemModal">
-                <div class="modal-header">
-                    <h2 id="modalTitle">Tambah Barang Baru</h2>
-                    <button class="close-btn" id="closeModalBtn">✕</button>
-                </div>
-
-                <form id="itemForm">
-                    <div class="form-group">
-                        <label class="form-label">Nama Barang *</label>
-                        <input type="text" class="form-input" id="itemName" placeholder="Contoh: Susu, Ban Motor" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Kategori *</label>
-                        <select class="form-select" id="itemCategory" required>
-                            <option value="">Pilih Kategori</option>
-                            <option value="Makanan">🍎 Makanan</option>
-                            <option value="Minuman">🥤 Minuman</option>
-                            <option value="Obat">💊 Obat</option>
-                            <option value="Perawatan">🧴 Perawatan</option>
-                            <option value="Kendaraan">🚗 Kendaraan</option>
-                            <option value="Rumah">🏠 Rumah</option>
-                            <option value="Elektronik">📱 Elektronik</option>
-                            <option value="Lainnya">📦 Lainnya</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Tanggal Mulai *</label>
-                        <input type="date" class="form-input" id="itemStartDate" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Estimasi Durasi (hari)</label>
-                        <input type="number" class="form-input" id="itemDuration" placeholder="Contoh: 30" min="1">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Tanggal Expired/Ganti</label>
-                        <input type="date" class="form-input" id="itemExpiredDate">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Catatan</label>
-                        <textarea class="form-textarea" id="itemNote" placeholder="Tambahkan catatan jika perlu..."></textarea>
-                    </div>
-
-                    <div class="form-buttons">
-                        <button type="button" class="cancel-btn" id="cancelBtn">Batal</button>
-                        <button type="submit" class="submit-btn">Simpan</button>
-                    </div>
-                </form>
-            </div>
+                <button type="submit" class="w-full py-3 bg-slate-800 hover:bg-slate-900 dark:bg-brand-600 dark:hover:bg-brand-700 text-white rounded-xl font-medium shadow-md transition mt-2">Daftar Akun</button>
+                <p class="text-center text-sm text-slate-500 mt-4">Sudah punya akun? <button type="button" onclick="app.toggleAuthForm('login')" class="text-brand-600 font-bold hover:underline">Masuk disini</button></p>
+            </form>
         </div>
     </div>
 
-    <div class="bottom-nav">
-        <button class="nav-item" data-page="dashboard">
-            <div class="nav-icon">📊</div>
-            <div class="nav-label">Dashboard</div>
-        </button>
-        <button class="nav-item" data-page="dashboard">
-            <div class="nav-icon">🏠</div>
-            <div class="nav-label">Rumah</div>
-        </button>
-        <button class="nav-item center" id="addBtn">
-            <div class="nav-icon">+</div>
-        </button>
-        <button class="nav-item" data-page="calendar">
-            <div class="nav-icon">📅</div>
-            <div class="nav-label">Kalender</div>
-        </button>
-        <button class="nav-item" data-page="profile">
-            <div class="nav-icon">👤</div>
-            <div class="nav-label">Profil</div>
-        </button>
+    <!-- ================= MAIN APP WRAPPER (Hidden until logged in) ================= -->
+    <div id="main-app" class="hidden pb-24">
+        
+        <!-- App Header -->
+        <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800 px-4 py-4 flex justify-between items-center shadow-sm">
+            <div class="flex items-center gap-2">
+                <div class="bg-brand-500 text-white p-2 rounded-xl relative">
+                    <i data-lucide="box" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-bold text-lg leading-tight text-slate-900 dark:text-white" id="header-user-name">MasaPakai</h1>
+                        <!-- SYNC INDICATOR -->
+                        <i data-lucide="refresh-cw" id="sync-icon" class="w-3 h-3 text-brand-500 opacity-0 transition-opacity spin-slow" title="Menyimpan ke Cloud..."></i>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium" id="header-title">Dasbor Utama</p>
+                </div>
+            </div>
+            <button onclick="app.logout()" class="p-2 rounded-full hover:bg-rose-50 dark:hover:bg-rose-900/30 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 transition" title="Keluar">
+                <i data-lucide="log-out" class="w-5 h-5"></i>
+            </button>
+        </header>
+
+        <main class="p-4 max-w-lg mx-auto">
+            <!-- ================= VIEW: DASHBOARD ================= -->
+            <div id="view-dashboard" class="view-section active space-y-6">
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center text-center">
+                        <div class="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-1"><i data-lucide="shield-check" class="w-4 h-4"></i></div>
+                        <span class="text-xl font-bold text-slate-800 dark:text-white" id="stat-aman">0</span>
+                        <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">Aman</span>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center text-center">
+                        <div class="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-1"><i data-lucide="alert-circle" class="w-4 h-4"></i></div>
+                        <span class="text-xl font-bold text-slate-800 dark:text-white" id="stat-segera">0</span>
+                        <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">Segera</span>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center text-center">
+                        <div class="w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-1"><i data-lucide="siren" class="w-4 h-4"></i></div>
+                        <span class="text-xl font-bold text-slate-800 dark:text-white" id="stat-lewat">0</span>
+                        <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">Expired</span>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+                    <h2 class="font-bold text-sm mb-3 flex items-center gap-2 dark:text-white"><i data-lucide="bar-chart-2" class="w-4 h-4 text-brand-500"></i> Grafik Umur Barang (Top 3)</h2>
+                    <div id="dashboard-chart" class="space-y-3"></div>
+                </div>
+
+                <div>
+                    <h2 class="font-bold text-sm mb-3 flex items-center gap-2 dark:text-white"><i data-lucide="clock" class="w-4 h-4 text-amber-500"></i> Segera Berakhir</h2>
+                    <div id="dashboard-expiring" class="space-y-3"></div>
+                </div>
+            </div>
+
+            <!-- ================= VIEW: CALENDAR ================= -->
+            <div id="view-calendar" class="view-section">
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700 mb-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <button onclick="app.changeMonth(-1)" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
+                        <h2 id="calendar-month-year" class="font-bold text-lg dark:text-white">Bulan Tahun</h2>
+                        <button onclick="app.changeMonth(1)" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
+                    </div>
+                    <div class="calendar-grid text-slate-500 dark:text-slate-400 mb-2 font-medium text-center text-xs">
+                        <div>Min</div><div>Sen</div><div>Sel</div><div>Rab</div><div>Kam</div><div>Jum</div><div>Sab</div>
+                    </div>
+                    <div id="calendar-days" class="calendar-grid"></div>
+                </div>
+                <h3 class="font-bold text-sm mb-3 dark:text-white" id="calendar-selected-date-text">Jadwal di Tanggal Terpilih</h3>
+                <div id="calendar-events" class="space-y-3"></div>
+            </div>
+
+            <!-- ================= VIEW: LIST ================= -->
+            <div id="view-list" class="view-section space-y-4">
+                <div class="flex gap-2">
+                    <div class="relative flex-1">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3.5 text-slate-400"></i>
+                        <input type="text" id="search-input" onkeyup="app.renderList()" placeholder="Cari barang..." class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 outline-none bg-white dark:bg-slate-800 dark:text-white text-sm">
+                    </div>
+                    <select id="sort-input" onchange="app.renderList()" class="px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 outline-none bg-white dark:bg-slate-800 dark:text-white text-sm appearance-none min-w-[100px]">
+                        <option value="date-asc">Waktu Terdekat</option>
+                        <option value="date-desc">Waktu Terjauh</option>
+                        <option value="name">Nama (A-Z)</option>
+                        <option value="category">Kategori</option>
+                    </select>
+                </div>
+
+                <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                    <button onclick="app.setListFilter('all')" id="list-tab-all" class="px-4 py-1.5 rounded-full text-xs font-medium bg-slate-800 text-white transition whitespace-nowrap">Semua</button>
+                    <button onclick="app.setListFilter('Kendaraan')" id="list-tab-Kendaraan" class="px-4 py-1.5 rounded-full text-xs font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 whitespace-nowrap">Kendaraan</button>
+                    <button onclick="app.setListFilter('Rumah')" id="list-tab-Rumah" class="px-4 py-1.5 rounded-full text-xs font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 whitespace-nowrap">Rumah Tangga</button>
+                    <button onclick="app.setListFilter('Makanan')" id="list-tab-Makanan" class="px-4 py-1.5 rounded-full text-xs font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 whitespace-nowrap">Makanan</button>
+                </div>
+                <div id="full-item-list" class="space-y-3"></div>
+            </div>
+
+            <!-- ================= VIEW: SETTINGS ================= -->
+            <div id="view-settings" class="view-section space-y-4">
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700">
+                    <h2 class="font-bold text-lg mb-4 flex items-center gap-2 dark:text-white"><i data-lucide="user" class="w-5 h-5 text-brand-500"></i> Info Akun</h2>
+                    <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-600 mb-4">
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Login sebagai:</p>
+                        <p class="font-bold text-slate-800 dark:text-white" id="setting-username">-</p>
+                        <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1"><i data-lucide="cloud-check" class="w-3 h-3"></i> Terhubung ke Cloud</p>
+                    </div>
+                    <button onclick="app.logout()" class="w-full py-2 bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 rounded-lg text-sm font-medium border border-rose-200 dark:border-rose-800 transition hover:bg-rose-100 dark:hover:bg-rose-900/50">Log Out</button>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700">
+                    <h2 class="font-bold text-lg mb-4 flex items-center gap-2 dark:text-white"><i data-lucide="sliders" class="w-5 h-5 text-brand-500"></i> Preferensi Aplikasi</h2>
+                    <div class="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-700">
+                        <div>
+                            <p class="font-medium text-sm dark:text-white">Mode Gelap (Dark Mode)</p>
+                        </div>
+                        <button onclick="app.toggleTheme()" class="w-12 h-6 bg-slate-200 dark:bg-brand-500 rounded-full relative transition-colors duration-300">
+                            <div class="w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 shadow-sm transform transition-transform duration-300 dark:translate-x-6"></div>
+                        </button>
+                    </div>
+                    <div class="py-4">
+                        <button onclick="app.exportData()" class="w-full py-3 border border-brand-500 text-brand-600 dark:text-brand-400 rounded-xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-brand-50 dark:hover:bg-slate-700 transition">
+                            <i data-lucide="download" class="w-4 h-4"></i> Export Data (Backup JSON)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Navigation Bar -->
+        <nav class="fixed bottom-0 w-full bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 z-30 pb-safe">
+            <div class="max-w-lg mx-auto flex justify-between items-center px-6 py-2 relative">
+                <button onclick="app.navigate('dashboard')" id="nav-dashboard" class="nav-btn flex flex-col items-center p-2 text-brand-600 dark:text-brand-400"><i data-lucide="layout-dashboard" class="w-6 h-6 mb-1"></i><span class="text-[10px] font-medium">Dasbor</span></button>
+                <button onclick="app.navigate('calendar')" id="nav-calendar" class="nav-btn flex flex-col items-center p-2 text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"><i data-lucide="calendar" class="w-6 h-6 mb-1"></i><span class="text-[10px] font-medium">Kalender</span></button>
+                
+                <div class="relative -top-6">
+                    <button onclick="app.openModal()" class="w-14 h-14 bg-brand-600 text-white rounded-full shadow-lg shadow-brand-500/40 flex items-center justify-center hover:bg-brand-700 active:scale-95 transition-transform border-4 border-white dark:border-slate-900">
+                        <i data-lucide="plus" class="w-7 h-7"></i>
+                    </button>
+                </div>
+
+                <button onclick="app.navigate('list')" id="nav-list" class="nav-btn flex flex-col items-center p-2 text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"><i data-lucide="list" class="w-6 h-6 mb-1"></i><span class="text-[10px] font-medium">Data</span></button>
+                <button onclick="app.navigate('settings')" id="nav-settings" class="nav-btn flex flex-col items-center p-2 text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"><i data-lucide="settings-2" class="w-6 h-6 mb-1"></i><span class="text-[10px] font-medium">Setelan</span></button>
+            </div>
+        </nav>
+    </div>
+
+    <!-- PWA Install Prompt Banner -->
+    <div id="pwa-prompt" class="fixed top-4 left-4 right-4 bg-brand-600 text-white p-4 rounded-2xl shadow-2xl z-50 flex justify-between items-center hidden transform transition-transform duration-300 translate-y-0">
+        <div class="flex items-center gap-3">
+            <div class="bg-white/20 p-2 rounded-lg"><i data-lucide="download-cloud" class="w-6 h-6"></i></div>
+            <div>
+                <p class="font-bold text-sm">Install MasaPakai</p>
+                <p class="text-xs text-brand-100">Akses lebih cepat dari layar utama</p>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="document.getElementById('pwa-prompt').classList.add('hidden')" class="p-2 text-brand-100 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            <button onclick="app.installPWA()" class="px-4 py-2 bg-white text-brand-600 text-sm font-bold rounded-xl hover:bg-slate-100 transition">Install</button>
+        </div>
+    </div>
+
+    <!-- Modal Form: Add / Edit -->
+    <div id="form-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden items-end sm:items-center justify-center transition-opacity opacity-0">
+        <div id="modal-content" class="bg-white dark:bg-slate-800 w-full sm:w-[28rem] rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl transform translate-y-full sm:translate-y-10 transition-transform max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-slate-800 dark:text-white" id="modal-title">Tambah Catatan</h2>
+                <button onclick="app.closeModal()" class="p-2 bg-slate-100 dark:bg-slate-700 rounded-full text-slate-500 dark:text-slate-300"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+
+            <div class="mb-5" id="smart-recommendations-container">
+                <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Rekomendasi Pintar</label>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" onclick="app.applyPreset('oli')" class="px-3 py-1.5 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 text-xs font-medium rounded-lg border border-brand-200 dark:border-brand-800 flex items-center gap-1 transition hover:bg-brand-100"><i data-lucide="settings" class="w-3 h-3"></i> Oli Motor</button>
+                    <button type="button" onclick="app.applyPreset('rem')" class="px-3 py-1.5 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 text-xs font-medium rounded-lg border border-brand-200 dark:border-brand-800 flex items-center gap-1 transition hover:bg-brand-100"><i data-lucide="circle-dashed" class="w-3 h-3"></i> Kampas Rem</button>
+                    <button type="button" onclick="app.applyPreset('sikat')" class="px-3 py-1.5 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 text-xs font-medium rounded-lg border border-brand-200 dark:border-brand-800 flex items-center gap-1 transition hover:bg-brand-100"><i data-lucide="droplet" class="w-3 h-3"></i> Sikat Gigi</button>
+                </div>
+            </div>
+
+            <form id="item-form" onsubmit="app.saveItem(event)" class="space-y-4">
+                <input type="hidden" id="item-id">
+                <div><label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nama Barang</label><input type="text" id="item-name" required class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 outline-none bg-slate-50 dark:bg-slate-700 dark:text-white text-sm"></div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Kategori</label>
+                    <select id="item-category" required class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 outline-none bg-slate-50 dark:bg-slate-700 dark:text-white text-sm">
+                        <option value="Kendaraan">Kendaraan</option><option value="Rumah">Rumah Tangga</option><option value="Makanan">Makanan</option><option value="Dokumen">Dokumen</option><option value="Lainnya">Lainnya</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tgl Mulai</label><input type="date" id="item-start-date" required class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 outline-none bg-slate-50 dark:bg-slate-700 dark:text-white text-sm"></div>
+                    <div><label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tgl Expired</label><input type="date" id="item-end-date" required class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-brand-500 outline-none bg-slate-50 dark:bg-slate-700 dark:text-white text-sm"></div>
+                </div>
+                <div class="pt-4 border-t border-slate-100 dark:border-slate-700 flex gap-2">
+                    <button type="button" onclick="app.closeModal()" class="px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-100 dark:hover:bg-slate-700 transition">Batal</button>
+                    <button type="button" id="btn-delete-item" onclick="app.deleteCurrentItem()" class="hidden px-4 py-3 rounded-xl bg-rose-100 text-rose-600 font-medium hover:bg-rose-200 transition">Hapus</button>
+                    <button type="submit" class="flex-1 px-4 py-3 rounded-xl bg-brand-600 text-white font-medium shadow-md shadow-brand-500/20 hover:bg-brand-700 transition">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed top-20 left-1/2 transform -translate-x-1/2 bg-slate-800 dark:bg-slate-700 text-white px-4 py-2 rounded-full text-sm shadow-xl opacity-0 transition-opacity duration-300 pointer-events-none z-50 flex items-center gap-2">
+        <i data-lucide="info" class="w-4 h-4 text-brand-400"></i><span id="toast-message">Pesan</span>
     </div>
 
     <script>
-        // ==================== CONFIG ====================
-        const CONFIG = {
-            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyOhBesgW8E6u20AqzIkGkqo5NHOswxgu_gt4qCmNHwM7Bakvdi_t81G3SvpRwUVs0lfQ/exec',
-            CACHE_TIME: 5 * 60 * 1000, // 5 menit
-        };
+        // MASUKKAN URL APP SCRIPT ANDA DI BAWAH INI (Ganti string kosong atau placeholder)
+        const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyL2D7BBlDmYQ1brk1hrQNbL_TvXiKXW_6Vd3C0HPgIEvTzv5pT2NKkT-iblKtyD9xqxg/exec";
 
-        // ==================== GLOBAL STATE ====================
-        const state = {
-            user: null,
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('pwa-prompt').classList.remove('hidden');
+        });
+
+        const app = {
             items: [],
-            filteredItems: [],
-            currentFilter: 'all',
-            isLoading: false,
-            isDarkMode: localStorage.getItem('darkMode') === 'true',
-            editingId: null,
-            currentPage: 'dashboard',
-        };
+            currentView: 'dashboard',
+            listFilter: 'all',
+            username: null,
+            
+            currentMonth: new Date().getMonth(),
+            currentYear: new Date().getFullYear(),
+            selectedDate: new Date().toISOString().split('T'),
+            
+            presets: {
+                'oli': { name: 'Ganti Oli Mesin', cat: 'Kendaraan', days: 90 },
+                'rem': { name: 'Ganti Kampas Rem', cat: 'Kendaraan', days: 180 },
+                'sikat': { name: 'Ganti Sikat Gigi', cat: 'Rumah', days: 90 },
+            },
 
-        // ==================== INIT ====================
-        document.addEventListener('DOMContentLoaded', () => {
-            setupDarkMode();
-            checkAuth();
-            setupEventListeners();
-            updateDateTime();
-            setInterval(updateDateTime, 1000);
-        });
+            init() {
+                lucide.createIcons();
+                this.checkTheme();
+                
+                // Cek status login lokal
+                const session = localStorage.getItem('masapakai_session');
+                if (session) {
+                    this.username = session;
+                    this.finishLogin(localStorage.getItem('masapakai_data') || '[]');
+                }
+            },
 
-        // ==================== AUTHENTICATION ====================
-        function checkAuth() {
-            const token = localStorage.getItem('userToken');
-            const userData = localStorage.getItem('userData');
-
-            if (token && userData) {
-                state.user = JSON.parse(userData);
-                showPage('dashboard');
-                loadItems();
-            } else {
-                showPage('login');
-            }
-        }
-
-        document.getElementById('showRegisterLink').addEventListener('click', (e) => {
-            e.preventDefault();
-            document.getElementById('loginForm').style.display = 'none';
-            document.getElementById('registerForm').style.display = 'block';
-        });
-
-        document.getElementById('showLoginLink').addEventListener('click', (e) => {
-            e.preventDefault();
-            document.getElementById('registerForm').style.display = 'none';
-            document.getElementById('loginForm').style.display = 'block';
-        });
-
-        document.getElementById('loginBtn').addEventListener('click', async () => {
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-
-            if (!email || !password) {
-                showToast('Email dan password wajib diisi', 'warning');
-                return;
-            }
-
-            try {
-                setLoading(true);
-                const response = await fetch(CONFIG.SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        action: 'login',
-                        email: email,
-                        password: password
-                    }),
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    state.user = data.user;
-                    localStorage.setItem('userToken', data.token);
-                    localStorage.setItem('userData', JSON.stringify(data.user));
-                    
-                    showToast('Login berhasil', 'success');
-                    
-                    setTimeout(() => {
-                        updateProfileInfo();
-                        showPage('dashboard');
-                        loadItems();
-                        document.getElementById('loginEmail').value = '';
-                        document.getElementById('loginPassword').value = '';
-                    }, 500);
+            // --- AUTHENTICATION & CLOUD SYNC ---
+            toggleAuthForm(type) {
+                if (type === 'register') {
+                    document.getElementById('form-login').classList.add('hidden');
+                    document.getElementById('form-register').classList.remove('hidden');
                 } else {
-                    showToast(data.error || 'Login gagal', 'error');
+                    document.getElementById('form-register').classList.add('hidden');
+                    document.getElementById('form-login').classList.remove('hidden');
                 }
-            } catch (error) {
-                console.error('Error:', error);
-                showToast('Terjadi kesalahan saat login', 'error');
-            } finally {
-                setLoading(false);
-            }
-        });
+            },
 
-        document.getElementById('registerBtn').addEventListener('click', async () => {
-            const name = document.getElementById('registerName').value;
-            const email = document.getElementById('registerEmail').value;
-            const password = document.getElementById('registerPassword').value;
-            const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
+            async handleAuth(e, action) {
+                e.preventDefault();
+                const userField = action === 'login' ? 'login-user' : 'reg-user';
+                const passField = action === 'login' ? 'login-pass' : 'reg-pass';
+                const user = document.getElementById(userField).value;
+                const pass = document.getElementById(passField).value;
 
-            if (!name || !email || !password || !passwordConfirm) {
-                showToast('Semua field wajib diisi', 'warning');
-                return;
-            }
+                if (!APP_SCRIPT_URL.startsWith('http')) {
+                    alert('Harap masukkan URL App Script (APP_SCRIPT_URL) pada file HTML terlebih dahulu!');
+                    return;
+                }
 
-            if (password.length < 6) {
-                showToast('Password minimal 6 karakter', 'warning');
-                return;
-            }
+                document.getElementById('auth-loading').classList.remove('hidden');
 
-            if (password !== passwordConfirm) {
-                showToast('Password tidak cocok', 'warning');
-                return;
-            }
-
-            try {
-                setLoading(true);
-                const response = await fetch(CONFIG.SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        action: 'register',
-                        name: name,
-                        email: email,
-                        password: password
-                    }),
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showToast('Registrasi berhasil, silakan login', 'success');
+                try {
+                    const response = await fetch(APP_SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: action, username: user, password: pass })
+                    });
                     
-                    setTimeout(() => {
-                        document.getElementById('registerForm').style.display = 'none';
-                        document.getElementById('loginForm').style.display = 'block';
-                        document.getElementById('registerName').value = '';
-                        document.getElementById('registerEmail').value = '';
-                        document.getElementById('registerPassword').value = '';
-                        document.getElementById('registerPasswordConfirm').value = '';
-                    }, 500);
-                } else {
-                    showToast(data.error || 'Registrasi gagal', 'error');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showToast('Terjadi kesalahan saat registrasi', 'error');
-            } finally {
-                setLoading(false);
-            }
-        });
-
-        // Allow Enter key to submit login/register
-        document.getElementById('loginPassword').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                document.getElementById('loginBtn').click();
-            }
-        });
-
-        document.getElementById('registerPasswordConfirm').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                document.getElementById('registerBtn').click();
-            }
-        });
-
-        // ==================== PAGE NAVIGATION ====================
-        function showPage(pageName) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById(pageName + 'Page').classList.add('active');
-
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.classList.remove('active');
-            });
-
-            document.querySelectorAll(`[data-page="${pageName}"]`).forEach(item => {
-                item.classList.add('active');
-            });
-
-            state.currentPage = pageName;
-
-            if (pageName === 'calendar') {
-                renderCalendar();
-            }
-        }
-
-        document.querySelectorAll('[data-page]').forEach(item => {
-            item.addEventListener('click', (e) => {
-                if (!e.target.closest('#addBtn')) {
-                    showPage(item.dataset.page);
-                }
-            });
-        });
-
-        // ==================== DARK MODE ====================
-        function setupDarkMode() {
-            if (state.isDarkMode) {
-                document.body.classList.add('dark-mode');
-                updateDarkModeIcons();
-            }
-        }
-
-        function toggleDarkMode() {
-            state.isDarkMode = !state.isDarkMode;
-            document.body.classList.toggle('dark-mode');
-            localStorage.setItem('darkMode', state.isDarkMode);
-            updateDarkModeIcons();
-        }
-
-        function updateDarkModeIcons() {
-            const icon = state.isDarkMode ? '☀️' : '🌙';
-            document.getElementById('darkModeToggle').textContent = icon;
-            document.getElementById('darkModeToggle2').textContent = icon;
-            document.getElementById('darkModeToggle3').textContent = icon;
-        }
-
-        document.getElementById('darkModeToggle').addEventListener('click', toggleDarkMode);
-        document.getElementById('darkModeToggle2').addEventListener('click', toggleDarkMode);
-        document.getElementById('darkModeToggle3').addEventListener('click', toggleDarkMode);
-
-        // ==================== DATETIME ====================
-        function updateDateTime() {
-            const now = new Date();
-
-            // Time
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            document.getElementById('currentTime').textContent = `${hours}:${minutes}`;
-
-            // Day
-            const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-            document.getElementById('currentDay').textContent = days[now.getDay()];
-
-            // Date
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-            const dateStr = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
-            document.getElementById('currentDate').textContent = dateStr;
-        }
-
-        // ==================== ITEMS MANAGEMENT ====================
-        async function loadItems() {
-            try {
-                setLoading(true);
-                const response = await fetch(CONFIG.SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        action: 'getItems',
-                        userId: state.user.id,
-                    }),
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    state.items = data.items || [];
-                } else {
-                    // Gunakan data dari localStorage jika offline
-                    state.items = JSON.parse(localStorage.getItem(`items_${state.user.id}`) || '[]');
-                }
-
-                renderItems();
-                updateStats();
-            } catch (error) {
-                console.error('Error loading items:', error);
-                state.items = JSON.parse(localStorage.getItem(`items_${state.user.id}`) || '[]');
-                renderItems();
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        async function saveItem(item) {
-            try {
-                setLoading(true);
-
-                const payload = {
-                    action: state.editingId ? 'updateItem' : 'addItem',
-                    userId: state.user.id,
-                    item: {
-                        ...item,
-                        id: state.editingId || 'item_' + Date.now(),
-                    },
-                };
-
-                const response = await fetch(CONFIG.SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(payload),
-                });
-
-                if (response.ok) {
-                    if (state.editingId) {
-                        const index = state.items.findIndex(i => i.id === state.editingId);
-                        if (index !== -1) {
-                            state.items[index] = payload.item;
+                    const res = await response.json();
+                    
+                    if (res.status === 'success') {
+                        this.showToast(res.message);
+                        if (action === 'login') {
+                            this.username = user;
+                            localStorage.setItem('masapakai_session', user);
+                            this.finishLogin(res.data);
+                        } else {
+                            this.toggleAuthForm('login');
                         }
                     } else {
-                        state.items.push(payload.item);
-                    }
-                    showToast('Data berhasil disimpan', 'success');
-                }
-
-                localStorage.setItem(`items_${state.user.id}`, JSON.stringify(state.items));
-                closeModal();
-                renderItems();
-                updateStats();
-            } catch (error) {
-                console.error('Error saving item:', error);
-                showToast('Gagal menyimpan data', 'error');
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        async function deleteItem(id) {
-            if (!confirm('Yakin ingin menghapus barang ini?')) return;
-
-            try {
-                setLoading(true);
-
-                const response = await fetch(CONFIG.SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        action: 'deleteItem',
-                        userId: state.user.id,
-                        itemId: id,
-                    }),
-                });
-
-                if (response.ok) {
-                    state.items = state.items.filter(i => i.id !== id);
-                    localStorage.setItem(`items_${state.user.id}`, JSON.stringify(state.items));
-                    showToast('Barang berhasil dihapus', 'success');
-                    renderItems();
-                    updateStats();
-                }
-            } catch (error) {
-                console.error('Error deleting item:', error);
-                showToast('Gagal menghapus barang', 'error');
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        // ==================== RENDERING ====================
-        function renderItems() {
-            const container = document.getElementById('itemsList');
-            let filtered = state.items;
-
-            if (state.currentFilter !== 'all') {
-                filtered = state.items.filter(item => {
-                    const status = getItemStatus(item);
-                    return status === state.currentFilter;
-                });
-            }
-
-            if (filtered.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📦</div>
-                        <div class="empty-state-text">Belum ada barang</div>
-                        <div class="empty-state-hint">Tambahkan barang pertama Anda dengan tombol +</div>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = filtered.map(item => {
-                const status = getItemStatus(item);
-                const progress = calculateProgress(item);
-                const age = calculateAge(item.startDate);
-
-                return `
-                    <div class="item-card ${status}">
-                        <div class="item-header">
-                            <div>
-                                <div class="item-name">${escapeHtml(item.name)}</div>
-                                <span class="item-category">${item.category}</span>
-                            </div>
-                            <div class="item-age">
-                                <div class="item-age-value">${age.days}</div>
-                                <div class="item-age-label">${age.label}</div>
-                            </div>
-                        </div>
-                        <div class="item-progress">
-                            <div class="item-progress-bar" style="width: ${Math.min(progress, 100)}%"></div>
-                        </div>
-                        <div class="item-dates">
-                            📅 Mulai: ${formatDate(item.startDate)}<br>
-                            ${item.expiredDate ? `⏰ Expired: ${formatDate(item.expiredDate)}` : ''}
-                        </div>
-                        ${item.note ? `<div class="item-dates">📝 ${escapeHtml(item.note)}</div>` : ''}
-                        <div class="item-actions">
-                            <button class="action-btn edit" onclick="editItem('${item.id}')">✏️ Edit</button>
-                            <button class="action-btn delete" onclick="deleteItem('${item.id}')">🗑️ Hapus</button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function getItemStatus(item) {
-            if (!item.expiredDate) return 'good';
-
-            const now = new Date();
-            const expired = new Date(item.expiredDate);
-            const daysUntilExpire = Math.ceil((expired - now) / (1000 * 60 * 60 * 24));
-
-            if (daysUntilExpire < 0) return 'expired';
-            if (daysUntilExpire <= 7) return 'warning';
-            return 'good';
-        }
-
-        function calculateAge(startDate) {
-            const start = new Date(startDate);
-            const now = new Date();
-            const days = Math.floor((now - start) / (1000 * 60 * 60 * 24));
-
-            if (days === 0) return { days: '0', label: 'hari' };
-            if (days < 30) return { days, label: 'hari' };
-            if (days < 365) {
-                const months = Math.floor(days / 30);
-                return { days: months, label: 'bulan' };
-            }
-
-            const years = Math.floor(days / 365);
-            return { days: years, label: 'tahun' };
-        }
-
-        function calculateProgress(item) {
-            if (!item.expiredDate || !item.startDate) return 0;
-
-            const start = new Date(item.startDate);
-            const expired = new Date(item.expiredDate);
-            const now = new Date();
-
-            const total = expired - start;
-            const elapsed = now - start;
-
-            return (elapsed / total) * 100;
-        }
-
-        function updateStats() {
-            const total = state.items.length;
-            const expired = state.items.filter(i => getItemStatus(i) === 'expired').length;
-            const warning = state.items.filter(i => getItemStatus(i) === 'warning').length;
-            const good = state.items.filter(i => getItemStatus(i) === 'good').length;
-
-            document.getElementById('totalItems').textContent = total;
-            document.getElementById('expiringItems').textContent = expired + warning;
-
-            document.getElementById('statTotalItems').textContent = total;
-            document.getElementById('statExpiredItems').textContent = expired;
-            document.getElementById('statWarningItems').textContent = warning;
-            document.getElementById('statGoodItems').textContent = good;
-        }
-
-        function updateProfileInfo() {
-            document.getElementById('profileName').textContent = state.user.name;
-            document.getElementById('profileEmail').textContent = state.user.email;
-        }
-
-        // ==================== MODAL ====================
-        function openModal() {
-            document.getElementById('modalOverlay').classList.add('active');
-            state.editingId = null;
-            document.getElementById('modalTitle').textContent = 'Tambah Barang Baru';
-            document.getElementById('itemForm').reset();
-            document.getElementById('itemStartDate').valueAsDate = new Date();
-        }
-
-        function closeModal() {
-            document.getElementById('modalOverlay').classList.remove('active');
-            state.editingId = null;
-            document.getElementById('itemForm').reset();
-        }
-
-        function editItem(id) {
-            const item = state.items.find(i => i.id === id);
-            if (!item) return;
-
-            state.editingId = id;
-            document.getElementById('modalTitle').textContent = 'Edit Barang';
-            document.getElementById('itemName').value = item.name;
-            document.getElementById('itemCategory').value = item.category;
-            document.getElementById('itemStartDate').value = item.startDate;
-            document.getElementById('itemDuration').value = item.duration || '';
-            document.getElementById('itemExpiredDate').value = item.expiredDate || '';
-            document.getElementById('itemNote').value = item.note || '';
-
-            document.getElementById('modalOverlay').classList.add('active');
-        }
-
-        document.getElementById('itemForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-
-            const item = {
-                id: state.editingId || 'item_' + Date.now(),
-                name: document.getElementById('itemName').value,
-                category: document.getElementById('itemCategory').value,
-                startDate: document.getElementById('itemStartDate').value,
-                duration: document.getElementById('itemDuration').value || null,
-                expiredDate: document.getElementById('itemExpiredDate').value || null,
-                note: document.getElementById('itemNote').value,
-                createdAt: new Date().toISOString(),
-            };
-
-            saveItem(item);
-        });
-
-        // ==================== CALENDAR ====================
-        function renderCalendar() {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth();
-
-            const monthName = new Date(year, month).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-            document.getElementById('calendarMonth').textContent = monthName;
-
-            const firstDay = new Date(year, month, 1);
-            const lastDay = new Date(year, month + 1, 0);
-            const startDate = new Date(firstDay);
-            startDate.setDate(startDate.getDate() - firstDay.getDay());
-
-            let html = '<div class="calendar-grid">';
-
-            const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-            dayNames.forEach(day => {
-                html += `<div class="calendar-day-header">${day}</div>`;
-            });
-
-            let currentDate = new Date(startDate);
-            while (currentDate < new Date(year, month + 1, 1) || currentDate.getDay() !== 0) {
-                const isCurrentMonth = currentDate.getMonth() === month;
-                const hasEvent = state.items.some(item => {
-                    const expDate = new Date(item.expiredDate || item.startDate);
-                    return expDate.toDateString() === currentDate.toDateString();
-                });
-
-                html += `
-                    <div class="calendar-day ${!isCurrentMonth ? 'other-month' : ''} ${hasEvent ? 'event' : ''}">
-                        ${currentDate.getDate()}
-                    </div>
-                `;
-
-                currentDate.setDate(currentDate.getDate() + 1);
-            }
-
-            html += '</div>';
-            document.getElementById('calendar').innerHTML = html;
-        }
-
-        // ==================== FILTER ====================
-        document.querySelectorAll('.filter-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                state.currentFilter = tab.dataset.filter;
-                renderItems();
-            });
-        });
-
-        // ==================== EXPORT/IMPORT ====================
-        document.getElementById('exportBtn').addEventListener('click', () => {
-            const data = {
-                user: state.user,
-                items: state.items,
-                exportedAt: new Date().toISOString(),
-            };
-
-            const json = JSON.stringify(data, null, 2);
-            const blob = new Blob([json], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `expiry-tracker-${Date.now()}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-
-            showToast('Data berhasil diexport', 'success');
-        });
-
-        document.getElementById('importBtn').addEventListener('click', () => {
-            document.getElementById('importFile').click();
-        });
-
-        document.getElementById('importFile').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                try {
-                    const data = JSON.parse(event.target.result);
-                    if (data.items && Array.isArray(data.items)) {
-                        state.items = data.items;
-                        localStorage.setItem(`items_${state.user.id}`, JSON.stringify(state.items));
-                        renderItems();
-                        updateStats();
-                        showToast('Data berhasil diimport', 'success');
+                        this.showToast(res.message || 'Proses Gagal');
                     }
                 } catch (error) {
-                    showToast('File tidak valid', 'error');
+                    this.showToast('Gagal terhubung ke server (Cek Console)');
+                    console.error('Auth Error:', error);
+                } finally {
+                    document.getElementById('auth-loading').classList.add('hidden');
                 }
-            };
-            reader.readAsText(file);
-        });
+            },
 
-        // ==================== LOGOUT ====================
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            if (confirm('Yakin ingin keluar?')) {
-                localStorage.removeItem('userToken');
-                localStorage.removeItem('userData');
-                state.user = null;
-                state.items = [];
-                showPage('login');
-                document.getElementById('loginForm').style.display = 'block';
-                document.getElementById('registerForm').style.display = 'none';
-                document.getElementById('loginEmail').value = '';
-                document.getElementById('loginPassword').value = '';
-            }
-        });
+            finishLogin(dataStr) {
+                try {
+                    this.items = (dataStr === "" || dataStr == null) ? [] : JSON.parse(dataStr);
+                } catch (e) { this.items = []; }
+                
+                // Update UI Text
+                document.getElementById('header-user-name').innerText = `Halo, ${this.username}`;
+                document.getElementById('setting-username').innerText = this.username;
+                
+                // Hide Auth, Show App
+                document.getElementById('auth-container').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                this.navigate('dashboard');
+                
+                // Cache locally
+                localStorage.setItem('masapakai_data', JSON.stringify(this.items));
+            },
 
-        // ==================== EVENT LISTENERS ====================
-        function setupEventListeners() {
-            document.getElementById('addBtn').addEventListener('click', openModal);
-            document.getElementById('closeModalBtn').addEventListener('click', closeModal);
-            document.getElementById('cancelBtn').addEventListener('click', closeModal);
+            logout() {
+                localStorage.removeItem('masapakai_session');
+                localStorage.removeItem('masapakai_data');
+                this.username = null;
+                this.items = [];
+                document.getElementById('auth-container').classList.remove('hidden');
+                document.getElementById('main-app').classList.add('hidden');
+                
+                // reset forms
+                document.getElementById('form-login').reset();
+                document.getElementById('form-register').reset();
+                this.toggleAuthForm('login');
+                this.showToast('Berhasil Log Out');
+            },
 
-            document.getElementById('modalOverlay').addEventListener('click', (e) => {
-                if (e.target === document.getElementById('modalOverlay')) {
-                    closeModal();
+            async syncToCloud() {
+                if (!this.username) return;
+                
+                // Tampilkan icon spinner kecil
+                const icon = document.getElementById('sync-icon');
+                icon.classList.remove('opacity-0');
+                
+                // Update Local Backup
+                const payload = JSON.stringify(this.items);
+                localStorage.setItem('masapakai_data', payload);
+
+                try {
+                    await fetch(APP_SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: 'sync', username: this.username, data: payload })
+                    });
+                    // Selesai sync, icon hilangkan lagi
+                    setTimeout(() => icon.classList.add('opacity-0'), 500);
+                } catch (err) {
+                    this.showToast('Gagal sync ke cloud. Data aman di perangkat.');
+                    icon.classList.add('opacity-0');
                 }
-            });
+            },
 
-            document.getElementById('prevMonth').addEventListener('click', () => {
-                const now = new Date();
-                now.setMonth(now.getMonth() - 1);
-                renderCalendar();
-            });
+            // --- PWA FEATURE ---
+            installPWA() {
+                if(deferredPrompt) {
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then((choiceResult) => {
+                        if (choiceResult.outcome === 'accepted') {
+                            document.getElementById('pwa-prompt').classList.add('hidden');
+                        }
+                        deferredPrompt = null;
+                    });
+                }
+            },
 
-            document.getElementById('nextMonth').addEventListener('click', () => {
-                const now = new Date();
-                now.setMonth(now.getMonth() + 1);
-                renderCalendar();
-            });
-        }
+            // --- UTILS & CORE LOGIC ---
+            showToast(message) {
+                const toast = document.getElementById('toast');
+                document.getElementById('toast-message').innerText = message;
+                toast.classList.remove('opacity-0');
+                toast.classList.add('opacity-100');
+                setTimeout(() => {
+                    toast.classList.remove('opacity-100');
+                    toast.classList.add('opacity-0');
+                }, 3000);
+            },
 
-        // ==================== UTILITIES ====================
-        function setLoading(isLoading) {
-            state.isLoading = isLoading;
-            const indicator = document.getElementById('loadingIndicator');
-            if (isLoading) {
-                indicator.style.display = 'flex';
-            } else {
-                indicator.style.display = 'none';
+            navigate(view) {
+                this.currentView = view;
+                document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+                document.getElementById(`view-${view}`).classList.add('active');
+
+                const navIds = ['dashboard', 'calendar', 'list', 'settings'];
+                navIds.forEach(id => {
+                    const btn = document.getElementById(`nav-${id}`);
+                    if(id === view) btn.className = "nav-btn flex flex-col items-center p-2 text-brand-600 dark:text-brand-400";
+                    else btn.className = "nav-btn flex flex-col items-center p-2 text-slate-400 hover:text-slate-800 dark:hover:text-slate-300 transition";
+                });
+
+                const headers = { 'dashboard': 'Dasbor Utama', 'calendar': 'Jadwal & Kalender', 'list': 'Daftar Semua Barang', 'settings': 'Pengaturan Aplikasi' };
+                document.getElementById('header-title').innerText = headers[view];
+
+                if(view === 'dashboard') this.renderDashboard();
+                if(view === 'calendar') this.renderCalendar();
+                if(view === 'list') this.renderList();
+                lucide.createIcons();
+            },
+
+            checkTheme() {
+                if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            },
+
+            toggleTheme() {
+                const isDark = document.documentElement.classList.toggle('dark');
+                localStorage.theme = isDark ? 'dark' : 'light';
+            },
+
+            exportData() {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.items));
+                const anchor = document.createElement('a');
+                anchor.setAttribute("href", dataStr);
+                anchor.setAttribute("download", `MasaPakai_${this.username}_Backup.json`);
+                document.body.appendChild(anchor);
+                anchor.click();
+                anchor.remove();
+                this.showToast('Data JSON diunduh');
+            },
+
+            calculateStatus(startDateStr, endDateStr) {
+                const start = new Date(startDateStr).setHours(0,0,0,0);
+                const end = new Date(endDateStr).setHours(0,0,0,0);
+                const today = new Date().setHours(0,0,0,0);
+
+                const totalDuration = end - start || 1;
+                const elapsed = today - start;
+                const remaining = end - today;
+                
+                const remainingDays = Math.ceil(remaining / (1000 * 60 * 60 * 24));
+                const totalDays = Math.ceil(totalDuration / (1000 * 60 * 60 * 24));
+                
+                let progressPercent = (elapsed / totalDuration) * 100;
+                if (progressPercent < 0) progressPercent = 0;
+                if (progressPercent > 100) progressPercent = 100;
+
+                let state = 'aman', colorClass = 'bg-emerald-500', bgClass = 'bg-emerald-50 dark:bg-emerald-900/30', textClass = 'text-emerald-700 dark:text-emerald-400';
+
+                if (remainingDays < 0) {
+                    state = 'lewat'; colorClass = 'bg-rose-500'; bgClass = 'bg-rose-50 dark:bg-rose-900/30'; textClass = 'text-rose-700 dark:text-rose-400'; progressPercent = 100;
+                } else if (remainingDays <= 14) { 
+                    state = 'segera'; colorClass = 'bg-amber-500'; bgClass = 'bg-amber-50 dark:bg-amber-900/30'; textClass = 'text-amber-700 dark:text-amber-400';
+                }
+                return { remainingDays, totalDays, progressPercent, state, colorClass, bgClass, textClass };
+            },
+
+            getCategoryIcon(cat) {
+                const icons = { 'Kendaraan': 'car', 'Rumah': 'home', 'Makanan': 'utensils', 'Dokumen': 'file-text', 'Lainnya': 'box' };
+                return icons[cat] || 'box';
+            },
+
+            formatDate(dateStr) {
+                return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+            },
+
+            // --- RENDERING ---
+            renderDashboard() {
+                let stats = { aman: 0, segera: 0, lewat: 0 };
+                let chartHtml = '', expiringHtml = '';
+
+                this.items.forEach(item => { stats[this.calculateStatus(item.startDate, item.endDate).state]++; });
+                document.getElementById('stat-aman').innerText = stats.aman;
+                document.getElementById('stat-segera').innerText = stats.segera;
+                document.getElementById('stat-lewat').innerText = stats.lewat;
+
+                let itemsForChart = this.items.map(i => ({ ...i, st: this.calculateStatus(i.startDate, i.endDate) })).sort((a, b) => b.st.totalDays - a.st.totalDays).slice(0, 3);
+                if (itemsForChart.length > 0) {
+                    itemsForChart.forEach(item => {
+                        chartHtml += `
+                        <div>
+                            <div class="flex justify-between text-xs mb-1 dark:text-slate-300"><span class="truncate max-w-[150px] font-medium">${item.name}</span><span>${item.st.totalDays} Hari Total</span></div>
+                            <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden"><div class="${item.st.colorClass} h-full transition-all duration-1000" style="width: ${item.st.progressPercent}%"></div></div>
+                        </div>`;
+                    });
+                } else chartHtml = '<p class="text-xs text-slate-400 text-center py-2">Belum ada data dicatat</p>';
+                document.getElementById('dashboard-chart').innerHTML = chartHtml;
+
+                let expiringItems = this.items.filter(i => { const st = this.calculateStatus(i.startDate, i.endDate); return st.state === 'segera' || st.state === 'lewat'; }).sort((a, b) => new Date(a.endDate) - new Date(b.endDate)).slice(0,3);
+                if (expiringItems.length > 0) {
+                    expiringItems.forEach(item => { expiringHtml += this.generateItemCard(item, false); });
+                } else {
+                    expiringHtml = `<div class="text-center py-6 text-slate-400"><i data-lucide="check-circle" class="w-8 h-8 mx-auto mb-2 opacity-50 text-emerald-500"></i><p class="text-sm">Semua barang/aktivitas aman!</p></div>`;
+                }
+                document.getElementById('dashboard-expiring').innerHTML = expiringHtml;
+            },
+
+            changeMonth(dir) {
+                this.currentMonth += dir;
+                if (this.currentMonth > 11) { this.currentMonth = 0; this.currentYear++; }
+                else if (this.currentMonth < 0) { this.currentMonth = 11; this.currentYear--; }
+                this.renderCalendar();
+            },
+
+            renderCalendar() {
+                const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
+                document.getElementById('calendar-month-year').innerText = `${monthNames[this.currentMonth]} ${this.currentYear}`;
+                const firstDay = new Date(this.currentYear, this.currentMonth, 1).getDay();
+                const daysInMonth = new Date(this.currentYear, this.currentMonth + 1, 0).getDate();
+                
+                let daysHtml = '';
+                for (let i = 0; i < firstDay; i++) daysHtml += `<div></div>`;
+                for (let i = 1; i <= daysInMonth; i++) {
+                    const dateStr = `${this.currentYear}-${String(this.currentMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                    const expiringItems = this.items.filter(item => item.endDate === dateStr);
+                    let dotHtml = expiringItems.length > 0 ? `<div class="calendar-dot ${this.calculateStatus(expiringItems.startDate, expiringItems.endDate).colorClass}"></div>` : '';
+                    const isSelected = this.selectedDate === dateStr ? 'active' : '';
+                    daysHtml += `<div onclick="app.selectDate('${dateStr}')" class="calendar-day hover:bg-slate-100 dark:hover:bg-slate-700 transition ${isSelected}">${i}${dotHtml}</div>`;
+                }
+                document.getElementById('calendar-days').innerHTML = daysHtml;
+                this.renderCalendarEvents();
+            },
+
+            selectDate(dateStr) { this.selectedDate = dateStr; this.renderCalendar(); },
+
+            renderCalendarEvents() {
+                document.getElementById('calendar-selected-date-text').innerText = `Jadwal: ${this.formatDate(this.selectedDate)}`;
+                const events = this.items.filter(item => item.endDate === this.selectedDate);
+                let html = events.length === 0 ? '<p class="text-xs text-slate-400 text-center py-4">Tidak ada jadwal jatuh tempo.</p>' : events.map(item => this.generateItemCard(item, true)).join('');
+                document.getElementById('calendar-events').innerHTML = html;
+                lucide.createIcons();
+            },
+
+            setListFilter(cat) {
+                this.listFilter = cat;
+                const tabs = ['all', 'Kendaraan', 'Rumah', 'Makanan'];
+                tabs.forEach(t => {
+                    const btn = document.getElementById(`list-tab-${t}`);
+                    if(btn) btn.className = t === cat ? "px-4 py-1.5 rounded-full text-xs font-medium bg-slate-800 dark:bg-brand-600 text-white transition whitespace-nowrap" : "px-4 py-1.5 rounded-full text-xs font-medium bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 whitespace-nowrap";
+                });
+                this.renderList();
+            },
+
+            renderList() {
+                const searchQ = document.getElementById('search-input').value.toLowerCase();
+                const sortBy = document.getElementById('sort-input').value;
+                
+                let displayItems = this.items.filter(item => (this.listFilter === 'all' || item.category === this.listFilter) && item.name.toLowerCase().includes(searchQ));
+                
+                displayItems.sort((a, b) => {
+                    if (sortBy === 'date-asc') return new Date(a.endDate) - new Date(b.endDate);
+                    if (sortBy === 'date-desc') return new Date(b.endDate) - new Date(a.endDate);
+                    if (sortBy === 'name') return a.name.localeCompare(b.name);
+                    return a.category.localeCompare(b.category);
+                });
+                
+                document.getElementById('full-item-list').innerHTML = displayItems.length === 0 ? `<div class="text-center py-10 text-slate-400"><i data-lucide="search-X" class="w-12 h-12 mx-auto mb-2 opacity-50"></i><p class="text-sm">Data tidak ditemukan.</p></div>` : displayItems.map(item => this.generateItemCard(item, true)).join('');
+                lucide.createIcons();
+            },
+
+            generateItemCard(item, isInteractive = true) {
+                const status = this.calculateStatus(item.startDate, item.endDate);
+                const icon = this.getCategoryIcon(item.category);
+                let statusText = status.state === 'lewat' ? `Terlewat ${Math.abs(status.remainingDays)} Hr` : status.remainingDays === 0 ? 'Hari Ini!' : `Sisa ${status.remainingDays} Hr`;
+                const clickAction = isInteractive ? `onclick="app.openModal('${item.id}')"` : '';
+                const cursor = isInteractive ? 'cursor-pointer hover:shadow-md hover:border-brand-300' : '';
+
+                return `
+                <div ${clickAction} class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700 relative overflow-hidden group transition ${cursor}">
+                    <div class="absolute left-0 top-0 bottom-0 w-1 ${status.colorClass}"></div>
+                    <div class="flex justify-between items-start mb-3 pl-2">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full ${status.bgClass} flex items-center justify-center"><i data-lucide="${icon}" class="w-5 h-5 ${status.textClass}"></i></div>
+                            <div><h3 class="font-bold text-slate-800 dark:text-white leading-tight">${item.name}</h3><p class="text-xs text-slate-500 dark:text-slate-400">${item.category}</p></div>
+                        </div>
+                        ${isInteractive ? `<button onclick="event.stopPropagation(); app.renewItem('${item.id}')" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 dark:bg-slate-700 text-brand-600 dark:text-brand-400 hover:bg-brand-50 transition" title="Perbarui Siklus"><i data-lucide="refresh-cw" class="w-4 h-4"></i></button>` : ''}
+                    </div>
+                    <div class="pl-2">
+                        <div class="flex justify-between text-xs font-medium mb-1.5"><span class="text-slate-500 dark:text-slate-400">Mulai: ${this.formatDate(item.startDate)}</span><span class="${status.textClass} font-bold">${statusText}</span></div>
+                        <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 mb-2 overflow-hidden"><div class="${status.colorClass} h-2 rounded-full transition-all duration-1000" style="width: ${status.progressPercent}%"></div></div>
+                        <p class="text-[10px] text-slate-400 text-right">Target: ${this.formatDate(item.endDate)}</p>
+                    </div>
+                </div>`;
+            },
+
+            // --- MODAL & CRUD ACTIONS ---
+            openModal(editId = null) {
+                const modal = document.getElementById('form-modal'), content = document.getElementById('modal-content'), form = document.getElementById('item-form'), btnDelete = document.getElementById('btn-delete-item');
+                modal.classList.remove('hidden'); modal.classList.add('flex');
+                setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('translate-y-full', 'sm:translate-y-10'); }, 10);
+
+                if (editId) {
+                    document.getElementById('modal-title').innerText = 'Edit / Hapus Catatan';
+                    document.getElementById('smart-recommendations-container').style.display = 'none';
+                    btnDelete.classList.remove('hidden');
+                    const item = this.items.find(i => i.id === editId);
+                    document.getElementById('item-id').value = item.id; document.getElementById('item-name').value = item.name; document.getElementById('item-category').value = item.category; document.getElementById('item-start-date').value = item.startDate; document.getElementById('item-end-date').value = item.endDate;
+                } else {
+                    document.getElementById('modal-title').innerText = 'Tambah Catatan Baru';
+                    document.getElementById('smart-recommendations-container').style.display = 'block';
+                    btnDelete.classList.add('hidden');
+                    form.reset(); document.getElementById('item-id').value = ''; document.getElementById('item-start-date').value = new Date().toISOString().split('T');
+                }
+            },
+
+            closeModal() {
+                const modal = document.getElementById('form-modal'), content = document.getElementById('modal-content');
+                modal.classList.add('opacity-0'); content.classList.add('translate-y-full', 'sm:translate-y-10');
+                setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 300);
+            },
+
+            applyPreset(presetKey) {
+                const preset = this.presets[presetKey]; if (!preset) return;
+                document.getElementById('item-name').value = preset.name; document.getElementById('item-category').value = preset.cat;
+                const startDate = new Date(document.getElementById('item-start-date').value || new Date());
+                startDate.setDate(startDate.getDate() + preset.days);
+                document.getElementById('item-end-date').value = startDate.toISOString().split('T');
+                this.showToast(`Preset Diterapkan: +${preset.days} Hari`);
+            },
+
+            saveItem(e) {
+                e.preventDefault();
+                const id = document.getElementById('item-id').value;
+                const newItem = {
+                    id: id || Date.now().toString(),
+                    name: document.getElementById('item-name').value, category: document.getElementById('item-category').value,
+                    startDate: document.getElementById('item-start-date').value, endDate: document.getElementById('item-end-date').value,
+                };
+                
+                if (id) {
+                    const index = this.items.findIndex(i => i.id === id);
+                    this.items[index] = newItem; this.showToast('Data Diperbarui!');
+                } else {
+                    this.items.push(newItem); this.showToast('Data Ditambahkan!');
+                }
+                
+                this.closeModal();
+                this.refreshCurrentView();
+                this.syncToCloud(); // Panggil sinkronisasi background
+            },
+
+            deleteCurrentItem() {
+                const id = document.getElementById('item-id').value;
+                if(id && confirm('Hapus data ini permanen?')) {
+                    this.items = this.items.filter(i => i.id !== id);
+                    this.closeModal();
+                    this.showToast('Data dihapus');
+                    this.refreshCurrentView();
+                    this.syncToCloud();
+                }
+            },
+
+            renewItem(id) {
+                const item = this.items.find(i => i.id === id); if (!item) return;
+                const start = new Date(item.startDate), end = new Date(item.endDate);
+                const durationDays = (end - start) / (1000 * 60 * 60 * 24);
+                const today = new Date(); const newStart = today.toISOString().split('T');
+                today.setDate(today.getDate() + durationDays); const newEnd = today.toISOString().split('T');
+                
+                if(confirm(`Reset rutinitas "${item.name}" ke siklus baru?\n(Tgl baru: Hari ini s/d ${newEnd})`)) {
+                    item.startDate = newStart; item.endDate = newEnd;
+                    this.showToast('Jadwal di-reset!');
+                    this.refreshCurrentView();
+                    this.syncToCloud();
+                }
+            },
+
+            refreshCurrentView() {
+                if(this.currentView === 'dashboard') this.renderDashboard();
+                if(this.currentView === 'calendar') this.renderCalendar();
+                if(this.currentView === 'list') this.renderList();
             }
-        }
+        };
 
-        function showToast(message, type = 'success') {
-            const toast = document.createElement('div');
-            toast.className = `${type}-toast`;
-            toast.textContent = message;
-            document.body.appendChild(toast);
-
-            setTimeout(() => {
-                toast.remove();
-            }, 3000);
-        }
-
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-            return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
+        // Mulai aplikasi
+        window.addEventListener('DOMContentLoaded', () => { app.init(); });
     </script>
 </body>
 </html>
