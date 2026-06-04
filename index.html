@@ -358,19 +358,30 @@
                 const user = document.getElementById(userField).value;
                 const pass = document.getElementById(passField).value;
 
+                if (user.trim().length < 3 || pass.trim().length < 3) {
+                    this.showToast('Username dan Password minimal 3 karakter');
+                    return;
+                }
+
                 if (!APP_SCRIPT_URL.startsWith('http')) {
-                    alert('Harap masukkan URL App Script (APP_SCRIPT_URL) pada file HTML terlebih dahulu!');
+                    this.showToast('Konfigurasi APP_SCRIPT_URL diperlukan');
                     return;
                 }
 
                 document.getElementById('auth-loading').classList.remove('hidden');
 
                 try {
-                    const response = await fetch(APP_SCRIPT_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({ action: action, username: user, password: pass })
-                    });
+                    // Coba koneksi ke Google Apps Script
+                    const response = await Promise.race([
+                        fetch(APP_SCRIPT_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({ action: action, username: user, password: pass })
+                        }),
+                        new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('Timeout: Server tidak merespons')), 8000)
+                        )
+                    ]);
                     
                     const res = await response.json();
                     
@@ -382,16 +393,64 @@
                             this.finishLogin(res.data);
                         } else {
                             this.toggleAuthForm('login');
+                            this.showToast('Akun terdaftar! Silakan Login');
                         }
                     } else {
                         this.showToast(res.message || 'Proses Gagal');
                     }
                 } catch (error) {
-                    this.showToast('Gagal terhubung ke server (Cek Console)');
                     console.error('Auth Error:', error);
+                    
+                    // FALLBACK: Gunakan autentikasi lokal jika server tidak terjangkau
+                    const localAuth = await this.handleLocalAuth(user, pass, action);
+                    if (localAuth.success) {
+                        this.showToast(localAuth.message + ' (Mode Offline)');
+                        if (action === 'login') {
+                            this.username = user;
+                            localStorage.setItem('masapakai_session', user);
+                            this.finishLogin(localAuth.data);
+                        } else {
+                            this.toggleAuthForm('login');
+                            this.showToast('Akun terdaftar! Silakan Login (Mode Offline)');
+                        }
+                    } else {
+                        this.showToast(localAuth.message);
+                    }
                 } finally {
                     document.getElementById('auth-loading').classList.add('hidden');
                 }
+            },
+
+            async handleLocalAuth(username, password, action) {
+                // Autentikasi berbasis localStorage untuk offline mode
+                const key = 'masapakai_users';
+                let users = {};
+                
+                try {
+                    const stored = localStorage.getItem(key);
+                    users = stored ? JSON.parse(stored) : {};
+                } catch (e) {
+                    users = {};
+                }
+
+                if (action === 'register') {
+                    if (users[username]) {
+                        return { success: false, message: 'Username sudah terdaftar' };
+                    }
+                    users[username] = { password: password, data: '[]' };
+                    localStorage.setItem(key, JSON.stringify(users));
+                    return { success: true, message: 'Akun berhasil dibuat', data: '[]' };
+                } else if (action === 'login') {
+                    if (!users[username]) {
+                        return { success: false, message: 'Username tidak ditemukan' };
+                    }
+                    if (users[username].password !== password) {
+                        return { success: false, message: 'Password salah' };
+                    }
+                    return { success: true, message: 'Berhasil Masuk', data: users[username].data };
+                }
+                
+                return { success: false, message: 'Aksi tidak dikenali' };
             },
 
             finishLogin(dataStr) {
@@ -438,16 +497,34 @@
                 const payload = JSON.stringify(this.items);
                 localStorage.setItem('masapakai_data', payload);
 
+                // Sinkronisasi ke local storage untuk offline mode
                 try {
-                    await fetch(APP_SCRIPT_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({ action: 'sync', username: this.username, data: payload })
-                    });
+                    const key = 'masapakai_users';
+                    let users = JSON.parse(localStorage.getItem(key) || '{}');
+                    if (users[this.username]) {
+                        users[this.username].data = payload;
+                        localStorage.setItem(key, JSON.stringify(users));
+                    }
+                } catch (e) {
+                    console.log('Error syncing to local storage:', e);
+                }
+
+                // Coba sync ke Google Apps Script jika tersedia
+                try {
+                    await Promise.race([
+                        fetch(APP_SCRIPT_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify({ action: 'sync', username: this.username, data: payload })
+                        }),
+                        new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('Timeout')), 5000)
+                        )
+                    ]);
                     // Selesai sync, icon hilangkan lagi
                     setTimeout(() => icon.classList.add('opacity-0'), 500);
                 } catch (err) {
-                    this.showToast('Gagal sync ke cloud. Data aman di perangkat.');
+                    console.log('Cloud sync unavailable, data saved locally', err);
                     icon.classList.add('opacity-0');
                 }
             },
